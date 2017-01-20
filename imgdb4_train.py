@@ -62,11 +62,7 @@ def train():
   with tf.Graph().as_default():
     global_step = tf.Variable(0, trainable=False)
 
-<<<<<<< HEAD
     # Get images and labels for IMGDB-4.
-=======
-    # Get images and labels for CIFAR-10.
->>>>>>> 6f0378d0df6fa84dfb5df17fd23ffc8cccd25f9d
     images, labels = imgdb4.distorted_inputs()
 
     # Build a Graph that computes the logits predictions from the
