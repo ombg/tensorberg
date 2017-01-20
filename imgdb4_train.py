@@ -48,7 +48,7 @@ import imgdb4
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('train_dir', '/home/meyn_ol/data/imgdb4/imgdb_train',
+tf.app.flags.DEFINE_string('train_dir', '/home/meyn_ol/data/imgdb4/imgdb_train_avg',
                            """Directory where to write event logs """
                            """and checkpoint.""")
 tf.app.flags.DEFINE_integer('max_steps', 1000000,
