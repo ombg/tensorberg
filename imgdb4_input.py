@@ -148,7 +148,11 @@ def distorted_inputs(data_dir, batch_size):
   """
 
   filenames = [os.path.join(data_dir, 'data_batch_%d.bin' % i)
+<<<<<<< HEAD
                for i in xrange(0, 2)]
+=======
+               for i in xrange(0, 16)]
+>>>>>>> 6f0378d0df6fa84dfb5df17fd23ffc8cccd25f9d
   for f in filenames:
     if not tf.gfile.Exists(f):
       raise ValueError('Failed to find file: ' + f)
@@ -209,7 +213,11 @@ def inputs(eval_data, data_dir, batch_size):
   """
   if not eval_data:
     filenames = [os.path.join(data_dir, 'data_batch_%d.bin' % i)
+<<<<<<< HEAD
                  for i in xrange(0, 2)]
+=======
+                 for i in xrange(0, 16)]
+>>>>>>> 6f0378d0df6fa84dfb5df17fd23ffc8cccd25f9d
     num_examples_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
   else:
     filenames = [os.path.join(data_dir, 'test_batch.bin')]
