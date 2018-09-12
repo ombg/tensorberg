@@ -5,7 +5,9 @@ import timeit
 import matplotlib.pyplot as plt
 
 from crowd_input import get_CIFAR10_data
-from crowd_one import simple_model
+
+from crowd_two import complex_model
+#from crowd_one import simple_model
 
 def run_model(session, predict, loss_val, Xd, yd,
               epochs=1, batch_size=64, print_every=100,
@@ -89,8 +91,8 @@ X = tf.placeholder(tf.float32, [None, 32, 32, 3])
 y = tf.placeholder(tf.int64, [None])
 is_training = tf.placeholder(tf.bool)
 
-# Set up the graph
-y_out = simple_model(X,y)
+# Specify the model you want to use
+y_out = complex_model(X,y,is_training)
 
 # define our loss
 total_loss = tf.losses.hinge_loss(tf.one_hot(y,10),logits=y_out)
@@ -100,11 +102,12 @@ mean_loss = tf.reduce_mean(total_loss)
 optimizer = tf.train.AdamOptimizer(5e-4) # select optimizer and set learning rate
 train_step = optimizer.minimize(mean_loss)
 
+# Start the session and invoke training and then validation.
 with tf.Session() as sess:
     with tf.device("/cpu:0"): #"/cpu:0" or "/gpu:0" 
         sess.run(tf.global_variables_initializer())
         print('Training')
-        run_model(sess,y_out,mean_loss,X_train,y_train,1,64,100,train_step,True)
+        run_model(sess,y_out,mean_loss,X_train,y_train,3,64,100,train_step,True)
         print('Validation')
         run_model(sess,y_out,mean_loss,X_val,y_val,1,64)
         print('Done!')
