@@ -95,7 +95,8 @@ is_training = tf.placeholder(tf.bool)
 y_out = complex_model(X,y,is_training)
 
 # define our loss
-total_loss = tf.losses.hinge_loss(tf.one_hot(y,10),logits=y_out)
+#total_loss = tf.losses.hinge_loss(tf.one_hot(y,10),logits=y_out)
+total_loss = tf.losses.softmax_cross_entropy(tf.one_hot(y,10),logits=y_out)
 mean_loss = tf.reduce_mean(total_loss)
 
 # define our optimizer
