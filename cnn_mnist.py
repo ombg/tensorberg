@@ -7,8 +7,14 @@ https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutoria
 import numpy as np
 import tensorflow as tf
 
-# Necessary for tf.train.LoggingTensorHook()
-tf.logging.set_verbosity(tf.logging.INFO)
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--batch_size', default=100, type=int, help='batch size')
+parser.add_argument('--train_steps', default=20000, type=int,
+                    help='number of training steps')
+#parser.add_argument('--reg', default=0.0, type=float32,
+#                    help='Scalar giving L2 regularization strength.')
 
 def cnn_model_fn(features, labels, mode):
 
@@ -41,8 +47,10 @@ def cnn_model_fn(features, labels, mode):
     pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * 64])
 
     # fc1: weight matrix shape: [7*7*64,1024]
+    # TODO regularization strength should be set with argparse
     fc1 = tf.layers.dense(inputs=pool2_flat, units=1024,
-                          activation=tf.nn.relu)
+                          activation=tf.nn.relu,
+                          kernel_regularizer=tf.contrib.layers.l2_regularizer(0.001))
 
     # Apply dropout on fc1. Switch off 40% during training.
     # output volume (2D): [batchsize, 1024]
@@ -52,11 +60,15 @@ def cnn_model_fn(features, labels, mode):
                         training = mode == tf.estimator.ModeKeys.TRAIN)
 
     # fc2: logits layer, no ReLU! TODO: units ok?
-    fc2 = tf.layers.dense(inputs=fc1_dropout, units=labels.shape[0])
+    # weight matrix shape: [1024, 10]
+    fc2 = tf.layers.dense(inputs=fc1_dropout, units=10,
+                          kernel_regularizer=tf.contrib.layers.l2_regularizer(0.001))
+
+    softmax_fc2 = tf.nn.softmax(fc2, name='softmax_fc2')
 
     predictions = {
         'classes': tf.argmax(input=fc2, axis=1),
-        'probabilities': tf.nn.softmax(fc2, name='softmax_tensor')
+        'probabilities': softmax_fc2
     }
 
     # PREDICT MODE - We run the whole function in PREDICT mode,
@@ -67,46 +79,62 @@ def cnn_model_fn(features, labels, mode):
     # Starting here, we run the whole function in TRAIN or EVAL mode,
     # so we calculate the loss.
     # This function returns the average over the whole batch.
-    loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=fc2)
 
+    data_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=fc2)
+
+    # Don't forget to add regularization loss
+    reg_loss = tf.losses.get_regularization_losses()
+    loss = data_loss + tf.reduce_sum(reg_loss)
+
+
+    tf.summary.histogram('logits_fc2',fc2)
+    tf.summary.histogram('softmax_fc2',fc2)
+
+    accuracy = tf.metrics.accuracy( labels=labels,
+                                    predictions=predictions['classes'],
+                                    name='acc_op')
+
+    # You can add multiple metrics. MESA distance?
+    metric_ops = { 'accuracy' : accuracy }
+
+    tf.summary.scalar('training_accuracy',accuracy[1])
     # TRAIN MODE - Configure the Training Op
     if mode == tf.estimator.ModeKeys.TRAIN:
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.0001)
         train_op = optimizer.minimize(
             loss=loss,
-            # Needed for TensorBoard
+            # Needed for TensorBoard!
             global_step=tf.train.get_global_step())
         # The estimator API requires cnn_model_fn() to return EstimatorSpecs
         # Only then the Estimator knows how to compute the loss and the gradient.
         return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
 
     # EVAL MODE - Add evaluation metrics.
-    # You can add multiple metrics. MESA distance?
-    eval_metric_ops = {
-        'accuracy' : tf.metrics.accuracy(
-            labels=labels, predictions=predictions['classes'])
-        }
-    # Make it available on TensorBoard TODO
-    #tf.summary.scalar('accuracy', accuracy[1])
+    
     return tf.estimator.EstimatorSpec(
         mode=mode,
         loss=loss,
-        eval_metric_ops=eval_metric_ops)
+        eval_metric_ops=metric_ops)
 
 
-def main(unused_argv):
+def train_mnist(argv):
+
+    args = parser.parse_args(argv[1:])
+    run_id = np.random.randint(1e6,size=1)[0]
+    print('run_id: {}'.format(run_id))
 
     # 1.
     # Load training and evaluate data
     #
 
-    mnist = tf.contrib.learn.dataset.load_data_set('mnist')
+    mnist = tf.contrib.learn.datasets.load_dataset('mnist')
 
-    # Returns a numpy array shape: (55000,28,28,1)? TODO
+    # Returns a numpy array shape: (55000,784)
     train_data = mnist.train.images
     train_labels = np.asarray( mnist.train.labels, dtype=np.int32 )
+    
 
-    # Returns a numpy array shape: (10000,28,28,1)? TODO
+    # Returns a numpy array shape: (10000,784)
     eval_data = mnist.test.images
     eval_labels = np.asarray( mnist.test.labels, dtype=np.int32 )
 
@@ -119,7 +147,8 @@ def main(unused_argv):
     # Could be a classifier or a regressor.
     mnist_classifier = tf.estimator.Estimator(
         model_fn=cnn_model_fn,
-        model_dir='/tmp/mnist_convnet_model')
+        model_dir='/tmp/mnist_convnet_model/run_' + str(run_id))
+
 
     # 3. (optional)
     # Set up logging to keep track of things
@@ -128,11 +157,11 @@ def main(unused_argv):
     # This dictionary contains all tensors you want to log.
     # Feel free to choose meaningful dictionary keys.
     # This key points to an existing tensor, the 'softmax_tensor'.
-    tensors_to_log = {'softmax_values': 'softmax_tensor'}
+    tensors_to_log = {'softmax_values': 'softmax_fc2'}
 
     logging_hook = tf.train.LoggingTensorHook(
         tensors=tensors_to_log, every_n_iter=50)
-
+    
     # 4.
     # Train the model
     #
@@ -141,14 +170,14 @@ def main(unused_argv):
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': train_data},
             y=train_labels,
-            batch_size=100,
+            batch_size=args.batch_size,
             num_epochs=None, # None == run forever
             shuffle=True)
 
     # Start training, using train_input_fn and logging_hook
     mnist_classifier.train(
         input_fn=train_input_fn,
-        steps=20000, # stop after 20000 steps. TODO What if num_epochs=1?
+        steps=args.train_steps, # stop after X steps. TODO What if num_epochs=1?
         hooks=[logging_hook])
 
     # 5.
@@ -164,7 +193,62 @@ def main(unused_argv):
 
     # Start evaluation and print the results
     eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
-    print(eval_results)
+    print('Evaluation results: {}'.format(eval_results))
+
+def sanity_check(argv):
+
+    run_id = np.random.randint(1e6,size=1)[0]
+    
+    print('====\nSanity check\n====')
+    print('run_id: {}'.format(run_id))
+
+    # 1.
+    # Create random data
+    #
+
+    eval_data = np.random.randn(10000,784)
+    eval_labels = np.random.randint(10,size=10000)
+    
+    # 2.
+    # Instaniate a TensorFlow Estimator class.
+    #
+
+    # It is a high-level representation of 
+    # model training, evaluation and inference
+    # Could be a classifier or a regressor.
+    mnist_classifier = tf.estimator.Estimator(
+        model_fn=cnn_model_fn,
+        model_dir='/tmp/mnist_convnet_model/run_' + str(run_id))
+
+
+    # 3. (optional)
+    # Set up logging to keep track of things
+    #
+
+    # This dictionary contains all tensors you want to log.
+    # Feel free to choose meaningful dictionary keys.
+    # This key points to an existing tensor, the 'softmax_tensor'.
+    tensors_to_log = {'softmax_values': 'softmax_fc2'}
+
+    logging_hook = tf.train.LoggingTensorHook(
+        tensors=tensors_to_log, every_n_iter=50)
+    
+    # 5.
+    # Perform a forward pass and calculate the loss
+    #
+
+    # Set up the evaluate-input function using eval_data
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+            x={'x': eval_data},
+            y=eval_labels, # no batchsize specified
+            num_epochs=1, # Makes sense. Test exactly ones on every sample.
+            shuffle=False) # Apparently
+
+    # Start evaluation and print the results
+    eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
+    print('Evaluation results: {}'.format(eval_results))
 
 if __name__ == "__main__":
-  tf.app.run()
+    # Necessary for tf.train.LoggingTensorHook()
+    tf.logging.set_verbosity(tf.logging.INFO)
+    tf.app.run(sanity_check)
