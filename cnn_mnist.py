@@ -65,6 +65,8 @@ def cnn_model_fn(features, labels, mode):
                           kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     softmax_fc2 = tf.nn.softmax(fc2, name='softmax_fc2')
+    tf.summary.histogram('logits_fc2',fc2)
+    tf.summary.histogram('softmax_fc2',softmax_fc2)
 
     predictions = {
         'classes': tf.argmax(input=fc2, axis=1),
@@ -89,10 +91,8 @@ def cnn_model_fn(features, labels, mode):
     # reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
     # loss = data_loss + tf.reduce_sum(reg_loss)
     # OR
-    loss = data_loss + tf.losses.get_regularization_loss()
-
-    tf.summary.histogram('logits_fc2',fc2)
-    tf.summary.histogram('softmax_fc2',fc2)
+    reg_loss = tf.losses.get_regularization_loss()
+    loss = data_loss + reg_loss
 
     accuracy = tf.metrics.accuracy( labels=labels,
                                     predictions=predictions['classes'],
@@ -101,9 +101,12 @@ def cnn_model_fn(features, labels, mode):
     # You can add multiple metrics. MESA distance?
     metric_ops = { 'accuracy' : accuracy }
 
-    tf.summary.scalar('training_accuracy',accuracy[1])
     # TRAIN MODE - Configure the Training Op
     if mode == tf.estimator.ModeKeys.TRAIN:
+        with tf.name_scope('train_metrics'):
+            tf.summary.scalar('model_accuracy', accuracy[1])
+            tf.summary.scalar('data_loss', data_loss)
+            tf.summary.scalar('reg_loss', reg_loss)
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=1e-4)
         train_op = optimizer.minimize(
             loss=loss,
@@ -151,7 +154,7 @@ def train_mnist(argv):
     # Could be a classifier or a regressor.
     mnist_classifier = tf.estimator.Estimator(
         model_fn=cnn_model_fn,
-        model_dir='/tmp/mnist_convnet_model/run_' + str(run_id))
+        model_dir='/tmp/docker/mnist_convnet_model/run_' + str(run_id))
 
 
     # 3. (optional)
@@ -255,4 +258,5 @@ def sanity_check(argv):
 if __name__ == "__main__":
     # Necessary for tf.train.LoggingTensorHook()
     tf.logging.set_verbosity(tf.logging.INFO)
-    tf.app.run(sanity_check)
+    #tf.app.run(sanity_check)
+    tf.app.run(train_mnist)
