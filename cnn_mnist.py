@@ -97,20 +97,21 @@ def cnn_model_fn(features, labels, mode):
     reg_loss = tf.losses.get_regularization_loss()
     loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
 
-    accuracy = tf.metrics.accuracy( labels=labels,
+    acc, acc_op = tf.metrics.accuracy( labels=labels,
                                     predictions=predictions['classes'],
                                     name='my_accuracy')
 
+    #acc = tf.identity(acc, name='tr_acc')
     # You can add multiple metrics. MESA distance?
-    metric_ops = { 'my_accuracy_metric_ops' : accuracy }
+    metric_ops = { 'my_accuracy_metric_ops' : (acc, acc_op) }
 
     # TRAIN MODE - Configure the Training Op
     if mode == tf.estimator.ModeKeys.TRAIN:
         with tf.name_scope('train_metrics'):
-            tf.summary.scalar('model_accuracy', accuracy[1])
+            tf.summary.scalar('model_accuracy', acc_op)
             tf.summary.scalar('data_loss', data_loss)
             tf.summary.scalar('reg_loss', reg_loss)
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=1e-4)
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=1e-2)
         train_op = optimizer.minimize(
             loss=loss,
             # Needed for TensorBoard!
@@ -153,7 +154,7 @@ def train_mnist(argv):
     if args.overfit == True:
         print('\n======================== DRY RUN - TRYING TO OVERFIT =====\n')
         num_samples = train_data.shape[0]
-        idx = np.random.randint(num_samples, size=100)
+        idx = np.random.randint(num_samples, size=200)
 
         train_data = train_data[idx, :]
         train_labels = train_labels[idx]
@@ -177,10 +178,10 @@ def train_mnist(argv):
     # This dictionary contains all tensors you want to log.
     # Feel free to choose meaningful dictionary keys.
     # This key points to an existing tensor, the 'softmax_tensor'.
-    tensors_to_log = {'softmax_values': 'softmax_fc2'}
+    tensors_to_log = {'tr_acc' : 'my_accuracy/value:0', 'tr_acc_op' : 'my_accuracy/update_op:0'}
 
     logging_hook = tf.train.LoggingTensorHook(
-        tensors=tensors_to_log, every_n_iter=50)
+        tensors=tensors_to_log, every_n_iter=30)
     
     # 4.
     # Train the model
@@ -191,7 +192,7 @@ def train_mnist(argv):
             x={'x': train_data},
             y=train_labels,
             batch_size=args.batch_size,
-            num_epochs=30, # None == run forever
+            num_epochs=100, # None == run forever
             shuffle=True)
 
     # Start training, using train_input_fn and logging_hook
