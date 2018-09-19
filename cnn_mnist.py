@@ -197,7 +197,6 @@ def train_mnist(argv):
     # Start training, using train_input_fn and logging_hook
     mnist_classifier.train(
         input_fn=train_input_fn,
-        steps=args.train_steps, # stop after X steps. TODO What if num_epochs=1?
         hooks=[logging_hook])
 
     # 5.
