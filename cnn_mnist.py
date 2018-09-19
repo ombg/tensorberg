@@ -50,7 +50,7 @@ def cnn_model_fn(features, labels, mode):
     # TODO regularization strength should be set with argparse
     fc1 = tf.layers.dense(inputs=pool2_flat, units=1024,
                           activation=tf.nn.relu,
-                          kernel_regularizer=tf.contrib.layers.l2_regularizer(0.001))
+                          kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     # Apply dropout on fc1. Switch off 40% during training.
     # output volume (2D): [batchsize, 1024]
@@ -62,7 +62,7 @@ def cnn_model_fn(features, labels, mode):
     # fc2: logits layer, no ReLU! TODO: units ok?
     # weight matrix shape: [1024, 10]
     fc2 = tf.layers.dense(inputs=fc1_dropout, units=10,
-                          kernel_regularizer=tf.contrib.layers.l2_regularizer(0.001))
+                          kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     softmax_fc2 = tf.nn.softmax(fc2, name='softmax_fc2')
 
@@ -83,9 +83,13 @@ def cnn_model_fn(features, labels, mode):
     data_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=fc2)
 
     # Don't forget to add regularization loss
-    reg_loss = tf.losses.get_regularization_losses()
-    loss = data_loss + tf.reduce_sum(reg_loss)
-
+    # reg_loss = tf.losses.get_regularization_losses()
+    # loss = data_loss + tf.reduce_sum(reg_loss)
+    # OR
+    # reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    # loss = data_loss + tf.reduce_sum(reg_loss)
+    # OR
+    loss = data_loss + tf.losses.get_regularization_loss()
 
     tf.summary.histogram('logits_fc2',fc2)
     tf.summary.histogram('softmax_fc2',fc2)
@@ -100,7 +104,7 @@ def cnn_model_fn(features, labels, mode):
     tf.summary.scalar('training_accuracy',accuracy[1])
     # TRAIN MODE - Configure the Training Op
     if mode == tf.estimator.ModeKeys.TRAIN:
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.0001)
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=1e-4)
         train_op = optimizer.minimize(
             loss=loss,
             # Needed for TensorBoard!
