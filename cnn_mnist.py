@@ -15,6 +15,9 @@ parser.add_argument('--train_steps', default=20000, type=int,
                     help='number of training steps')
 #parser.add_argument('--reg', default=0.0, type=float32,
 #                    help='Scalar giving L2 regularization strength.')
+parser.add_argument('--overfit', default=False, type=bool,
+                    help=('If true, it overfits a small subset'
+                          ' of the data as a sanity check.'))
 
 def cnn_model_fn(features, labels, mode):
 
@@ -92,14 +95,14 @@ def cnn_model_fn(features, labels, mode):
     # loss = data_loss + tf.reduce_sum(reg_loss)
     # OR
     reg_loss = tf.losses.get_regularization_loss()
-    loss = data_loss + reg_loss
+    loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
 
     accuracy = tf.metrics.accuracy( labels=labels,
                                     predictions=predictions['classes'],
-                                    name='acc_op')
+                                    name='my_accuracy')
 
     # You can add multiple metrics. MESA distance?
-    metric_ops = { 'accuracy' : accuracy }
+    metric_ops = { 'my_accuracy_metric_ops' : accuracy }
 
     # TRAIN MODE - Configure the Training Op
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -136,14 +139,24 @@ def train_mnist(argv):
 
     mnist = tf.contrib.learn.datasets.load_dataset('mnist')
 
+
     # Returns a numpy array shape: (55000,784)
     train_data = mnist.train.images
     train_labels = np.asarray( mnist.train.labels, dtype=np.int32 )
-    
+
 
     # Returns a numpy array shape: (10000,784)
     eval_data = mnist.test.images
     eval_labels = np.asarray( mnist.test.labels, dtype=np.int32 )
+
+    # Choose random subset for an initial overfitting
+    if args.overfit == True:
+        print('\n======================== DRY RUN - TRYING TO OVERFIT =====\n')
+        num_samples = train_data.shape[0]
+        idx = np.random.randint(num_samples, size=100)
+
+        train_data = train_data[idx, :]
+        train_labels = train_labels[idx]
 
     # 2.
     # Instaniate a TensorFlow Estimator class.
@@ -154,7 +167,7 @@ def train_mnist(argv):
     # Could be a classifier or a regressor.
     mnist_classifier = tf.estimator.Estimator(
         model_fn=cnn_model_fn,
-        model_dir='/tmp/docker/mnist_convnet_model/run_' + str(run_id))
+        model_dir='/tmp/mnist_convnet_model/run_ovrf_' + str(run_id))
 
 
     # 3. (optional)
@@ -178,7 +191,7 @@ def train_mnist(argv):
             x={'x': train_data},
             y=train_labels,
             batch_size=args.batch_size,
-            num_epochs=None, # None == run forever
+            num_epochs=30, # None == run forever
             shuffle=True)
 
     # Start training, using train_input_fn and logging_hook
@@ -210,7 +223,7 @@ def sanity_check(argv):
     print('run_id: {}'.format(run_id))
 
     # 1.
-    # Create random data
+    # Create random data, do not use a dataset
     #
 
     eval_data = np.random.randn(10000,784)
@@ -219,32 +232,14 @@ def sanity_check(argv):
     # 2.
     # Instaniate a TensorFlow Estimator class.
     #
-
-    # It is a high-level representation of 
-    # model training, evaluation and inference
-    # Could be a classifier or a regressor.
     mnist_classifier = tf.estimator.Estimator(
         model_fn=cnn_model_fn,
-        model_dir='/tmp/mnist_convnet_model/run_' + str(run_id))
+        model_dir='/tmp/mnist_convnet_model/sanity/run_' + str(run_id))
 
-
-    # 3. (optional)
-    # Set up logging to keep track of things
-    #
-
-    # This dictionary contains all tensors you want to log.
-    # Feel free to choose meaningful dictionary keys.
-    # This key points to an existing tensor, the 'softmax_tensor'.
-    tensors_to_log = {'softmax_values': 'softmax_fc2'}
-
-    logging_hook = tf.train.LoggingTensorHook(
-        tensors=tensors_to_log, every_n_iter=50)
-    
     # 5.
     # Perform a forward pass and calculate the loss
     #
 
-    # Set up the evaluate-input function using eval_data
     eval_input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': eval_data},
             y=eval_labels, # no batchsize specified
