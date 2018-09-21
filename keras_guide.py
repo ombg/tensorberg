@@ -67,18 +67,20 @@ def main(argv):
     # 1.
     # Construct the model
     #
-    cnn_model = keras.Sequential()
-    # fc1
-    cnn_model.add(keras.layers.Dense(64, activation='relu'))
-    # fc2
-    cnn_model.add(keras.layers.Dense(64, activation='relu'))
-    # softmax
-    cnn_model.add(keras.layers.Dense(3, activation='softmax'))
-
-    # Configure the model's training process
-    cnn_model.compile(optimizer=tf.train.AdamOptimizer(args.learning_rate),
-                      loss=tf.keras.losses.categorical_crossentropy,
-                      metrics=[keras.metrics.categorical_accuracy])
+    inputs = keras.Input(shape=(32,))  # Returns a placeholder tensor
+    
+    # A layer instance is callable on a tensor, and returns a tensor.
+    x = keras.layers.Dense(64, activation='relu')(inputs)
+    x = keras.layers.Dense(64, activation='relu')(x)
+    predictions = keras.layers.Dense(3, activation='softmax')(x)
+    
+    # Instantiate the model given inputs and outputs.
+    cnn_model = keras.Model(inputs=inputs, outputs=predictions)
+    
+    # The compile step specifies the training configuration.
+    cnn_model.compile(optimizer=tf.train.RMSPropOptimizer(0.001),
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
 
 
 
