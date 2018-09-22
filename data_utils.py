@@ -7,6 +7,22 @@ import os
 from imageio import imread
 import platform
 
+def print_shape(data):
+    try:
+        d = iter(data)
+    except TypeError:
+        print('This is just one element. Shape: {}.'.format(data.shape))
+    else:
+        print('Dataset size:')
+        for d in data:
+            print(d.shape)
+
+def get_random_data():
+    data = np.random.random((1000, 32))
+    labels = np.random.random((1000, 10))
+
+    return data, labels
+
 def load_pickle(f):
     version = platform.python_version_tuple()
     if version[0] == '2':
@@ -41,16 +57,18 @@ def load_CIFAR10(ROOT):
     return Xtr, Ytr, Xte, Yte
 
 
-def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000,
-                     subtract_mean=True):
+def get_CIFAR10_data(input_dir, 
+                     num_training=49000, num_validation=1000, num_test=10000,
+                     subtract_mean=False,
+                     normalize_data=False,
+                     channels_first=False):
     """
     Load the CIFAR-10 dataset from disk and perform preprocessing to prepare
     it for classifiers. These are the same steps as we used for the SVM, but
     condensed to a single function.
     """
     # Load the raw CIFAR-10 data
-    cifar10_dir = 'cs231n/datasets/cifar-10-batches-py'
-    X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir)
+    X_train, y_train, X_test, y_test = load_CIFAR10(input_dir)
 
     # Subsample the data
     mask = list(range(num_training, num_training + num_validation))
@@ -70,17 +88,19 @@ def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000,
         X_val -= mean_image
         X_test -= mean_image
 
-    # Transpose so that channels come first
-    X_train = X_train.transpose(0, 3, 1, 2).copy()
-    X_val = X_val.transpose(0, 3, 1, 2).copy()
-    X_test = X_test.transpose(0, 3, 1, 2).copy()
+    if normalize_data:
+        X_train = X_train / 255.0
+        X_val = X_val / 255.0
+        X_test = X_test / 255.0
 
-    # Package data into a dictionary
-    return {
-      'X_train': X_train, 'y_train': y_train,
-      'X_val': X_val, 'y_val': y_val,
-      'X_test': X_test, 'y_test': y_test,
-    }
+
+    # Transpose so that channels come first
+    if channels_first:
+        X_train = X_train.transpose(0, 3, 1, 2).copy()
+        X_val = X_val.transpose(0, 3, 1, 2).copy()
+        X_test = X_test.transpose(0, 3, 1, 2).copy()
+
+    return (X_train, y_train, X_val, y_val, X_test, y_test)
 
 
 def load_tiny_imagenet(path, dtype=np.float32, subtract_mean=True):

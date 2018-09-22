@@ -4,102 +4,97 @@ from tensorflow import keras
 import numpy as np
 import argparse
 
-from data_utils import load_CIFAR10
+# My modules
+import data_utils 
+from ompy import ml
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='/tmp/cifar-10-batches-py', type=str,
                     help='Directory which contains the dataset')
-parser.add_argument('--batch_size', default=32, type=int, help='batch size')
-parser.add_argument('--learning_rate', default=1e-3, type=float,
+parser.add_argument('--batch_size', default=100, type=int, help='batch size')
+parser.add_argument('--lr', default=1e-2, type=float,
                     help='optimizer learning rate')
-#parser.add_argument('--reg', default=0.0, type=float,
-#                    help='Scalar giving L2 regularization strength.')
-
-def get_CIFAR10_data(input_dir,
-                     num_training=49000, 
-                     num_validation=1000, 
-                     num_test=10000):
-    """
-    Load the CIFAR-10 dataset from disk and perform preprocessing to prepare
-    it for the two-layer neural net classifier. These are the same steps as
-    we used for the SVM, but condensed to a single function.  
-    """
-    # Load the raw CIFAR-10 data
-    X_train, y_train_1, X_test, y_test_1 = load_CIFAR10(input_dir)
-
-    # Reshape the data into a 2D matrix. One row holds one sample.
-    X_train = np.reshape(X_train,[X_train.shape[0], -1])
-    X_test = np.reshape(X_test,[X_test.shape[0], -1])
-
-    # One-hot encode the labels
-    y_train = np.zeros((y_train_1.size,10))
-    y_train[ np.arange(y_train_1.size), y_train_1] = 1
-    y_test = np.zeros((y_test_1.size,10))
-    y_test[ np.arange(y_test_1.size), y_test_1] = 1
-
-    # Subsample the data
-    mask = range(num_training, num_training + num_validation)
-    X_val = X_train[mask]
-    y_val = y_train[mask]
-    mask = range(num_training)
-    X_train = X_train[mask]
-    y_train = y_train[mask]
-    mask = range(num_test)
-    X_test = X_test[mask]
-    y_test = y_test[mask]
-
-    # Normalize the data: subtract the mean image
-    mean_image = np.mean(X_train, axis=0)
-    X_train -= mean_image
-    X_val -= mean_image
-    X_test -= mean_image
-
-    return X_train, y_train, X_val, y_val, X_test, y_test
-def get_random_data():
-    data = np.random.random((1000, 32))
-    labels = np.random.random((1000, 3))
-
-    return data, labels
+parser.add_argument('--reg', default=1e-2, type=float,
+                    help='Scalar giving L2 regularization strength.')
 
 def main(argv):
 
-    args = parser.parse_args(argv[1:])
+    run_id = np.random.randint(1e6,size=1)[0]
+    print('run_id: {}'.format(run_id))
+    args = parser.parse_args()
+    print(args)
     # 1.
     # Construct the model
     #
-    inputs = keras.Input(shape=(32,))  # Returns a placeholder tensor
+
+    # Returns a placeholder tensor
+    inputs = keras.Input(shape=(3072,),
+                         batch_size=args.batch_size,
+                         name='cifar_input_layer')
     
-    # A layer instance is callable on a tensor, and returns a tensor.
-    x = keras.layers.Dense(64, activation='relu')(inputs)
-    x = keras.layers.Dense(64, activation='relu')(x)
-    predictions = keras.layers.Dense(3, activation='softmax')(x)
+    x = keras.layers.Dense(
+            units=100,
+            kernel_initializer=keras.initializers.RandomNormal(),
+            kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
+            activation=tf.keras.activations.relu)(inputs)
+
+    x = keras.layers.Dense(
+            units=100,
+            kernel_initializer=keras.initializers.RandomNormal(),
+            kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
+            activation=tf.keras.activations.relu)(x)
+
+    x = keras.layers.Dense(
+            units=100,
+            kernel_initializer=keras.initializers.RandomNormal(),
+            kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
+            activation=tf.keras.activations.relu)(x)
+
+    x = keras.layers.Dense(
+            units=100,
+            kernel_initializer=keras.initializers.RandomNormal(),
+            kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
+            activation=tf.keras.activations.relu)(x)
+
+    predictions = keras.layers.Dense(
+        units=10,
+        kernel_initializer=keras.initializers.RandomNormal(),
+        kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
+        activation=tf.keras.activations.softmax)(x)
     
     # Instantiate the model given inputs and outputs.
     cnn_model = keras.Model(inputs=inputs, outputs=predictions)
     
     # The compile step specifies the training configuration.
-    cnn_model.compile(optimizer=tf.train.RMSPropOptimizer(0.001),
-              loss='categorical_crossentropy',
-              metrics=['accuracy'])
-
-
+    cnn_model.compile(optimizer= tf.keras.optimizers.SGD(lr=args.lr),
+              loss=tf.keras.losses.categorical_crossentropy,
+              metrics=[tf.keras.metrics.categorical_accuracy])
 
     # 2. 
     # Load a dataset
     #
-    #X_train, y_train, X_val, y_val, X_test, y_test = get_CIFAR10_data(args.data_dir)
-    #print('Train data shape: ', X_train.shape)
-    #print('Train labels shape: ', y_train.shape)
-    #print('Validation data shape: ', X_val.shape)
-    #print('Validation labels shape: ', y_val.shape)
-    #print('Test data shape: ', X_test.shape)
-    #print('Test labels shape: ', y_test.shape)
+    cifar_data = data_utils.get_CIFAR10_data(args.data_dir,
+                                             subtract_mean=True,
+                                             normalize_data=True)
 
-    X_test, y_test = get_random_data()
-    print('Test data shape: ', X_test.shape)
-    print('Test labels shape: ', y_test.shape)
+    data_utils.print_shape(cifar_data)
+    X_train, y_train, X_val, y_val, X_test, y_test = cifar_data
+    
+    # For a fully-connected net, reshape the samples to single rows.
+    X_train = np.reshape(X_train,[X_train.shape[0], -1])
+    X_val = np.reshape(X_val,[X_val.shape[0], -1])
+    X_test = np.reshape(X_test,[X_test.shape[0], -1])
 
-    ## Configure training set for TF Dataset
+    # One-hot encode the labels
+    y_train = ml.makeonehot(y_train)
+    y_val = ml.makeonehot(y_val)
+    y_test = ml.makeonehot(y_test)
+    
+    # Alternatively, get some random data for sanity checks.
+    #X_test, y_test = get_random_data()
+    #data_utils.print_shape((X_test, y_test))
+
+    ## Configure training set for TF Dataset (optional)
     #cifar10_train = tf.data.Dataset.from_tensor_slices((X_train, y_train))
     #cifar10_train = cifar10_train.batch(args.batch_size).repeat()
     ## Configure validation set for TF Dataset
@@ -109,9 +104,16 @@ def main(argv):
     # 3.
     # Training
     #
-    #cnn_model.fit(X_train, y_train, epochs=15,
-    #              batch_size=args.batch_size,
-    #              validation_data=(X_val,y_val))
+    
+    callbacks = [
+        # Write TensorBoard logs to `./logs` directory
+        keras.callbacks.TensorBoard(
+            log_dir='./logs_cifar_model_0/run_' + str(run_id))
+    ]
+    cnn_model.fit(X_train, y_train, epochs=200,
+                  batch_size=args.batch_size,
+                  validation_data=(X_val,y_val),
+                  callbacks=callbacks)
 
     # 4.
     # Evaluation and Prediction
