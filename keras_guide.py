@@ -11,7 +11,7 @@ from ompy import ml
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='/tmp/cifar-10-batches-py', type=str,
                     help='Directory which contains the dataset')
-parser.add_argument('--batch_size', default=100, type=int, help='batch size')
+parser.add_argument('--batch_size', default=50, type=int, help='batch size')
 parser.add_argument('--lr', default=1e-2, type=float,
                     help='optimizer learning rate')
 parser.add_argument('--reg', default=1e-2, type=float,
@@ -34,41 +34,36 @@ def main(argv):
     
     x = keras.layers.Dense(
             units=100,
-            kernel_initializer=keras.initializers.RandomNormal(),
             kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
-            activation=tf.keras.activations.relu)(inputs)
+            activation='relu')(inputs)
 
     x = keras.layers.Dense(
             units=100,
-            kernel_initializer=keras.initializers.RandomNormal(),
             kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
-            activation=tf.keras.activations.relu)(x)
+            activation='relu')(x)
 
     x = keras.layers.Dense(
             units=100,
-            kernel_initializer=keras.initializers.RandomNormal(),
             kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
-            activation=tf.keras.activations.relu)(x)
+            activation='relu')(x)
 
     x = keras.layers.Dense(
             units=100,
-            kernel_initializer=keras.initializers.RandomNormal(),
             kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
-            activation=tf.keras.activations.relu)(x)
+            activation='relu')(x)
 
     predictions = keras.layers.Dense(
         units=10,
-        kernel_initializer=keras.initializers.RandomNormal(),
         kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
-        activation=tf.keras.activations.softmax)(x)
+        activation='softmax')(x)
     
     # Instantiate the model given inputs and outputs.
     cnn_model = keras.Model(inputs=inputs, outputs=predictions)
     
     # The compile step specifies the training configuration.
     cnn_model.compile(optimizer= tf.keras.optimizers.SGD(lr=args.lr),
-              loss=tf.keras.losses.categorical_crossentropy,
-              metrics=[tf.keras.metrics.categorical_accuracy])
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
 
     # 2. 
     # Load a dataset
@@ -110,6 +105,9 @@ def main(argv):
         keras.callbacks.TensorBoard(
             log_dir='./logs_cifar_model_0/run_' + str(run_id))
     ]
+    mask = np.random.randint(0,49000,size=100)
+    X_train = X_train[mask]
+    y_train = y_train[mask]
     cnn_model.fit(X_train, y_train, epochs=200,
                   batch_size=args.batch_size,
                   validation_data=(X_val,y_val),
