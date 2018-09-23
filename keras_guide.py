@@ -6,16 +6,63 @@ import argparse
 
 # My modules
 import data_utils 
-from ompy import ml
+from ompy import ml, fileio
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data_dir', default='/tmp/cifar-10-batches-py', type=str,
-                    help='Directory which contains the dataset')
-parser.add_argument('--batch_size', default=50, type=int, help='batch size')
-parser.add_argument('--lr', default=1e-2, type=float,
+
+parser.add_argument('--input_path', 
+                    default='/tmp/cl_0123_ps_64_dm_55_sam_799_0_ppm.txt',
+                    type=str,
+                    help='Path which contains the dataset')
+
+parser.add_argument('--input_path_test', 
+                    default='/tmp/cl_0123_ps_64_dm_55_sam_799_1_ppm.txt',
+                    type=str,
+                    help=('Path which contains the test dataset.'
+                          'Mandatory for IMGDB dataset.'))
+
+parser.add_argument('--dataset_name',
+                    default='imgdb',
+                    type=str,
+                    help='Name of the dataset. Supported: CIFAR-10 or IMGDB')
+
+parser.add_argument('--batch_size', 
+                    default=100,
+                    type=int,
+                    help='batch size')
+
+parser.add_argument('--lr',
+                    default=1e-2,
+                    type=float,
                     help='optimizer learning rate')
-parser.add_argument('--reg', default=1e-2, type=float,
+
+parser.add_argument('--reg',
+                    default=1e-2,
+                    type=float,
                     help='Scalar giving L2 regularization strength.')
+
+# Reads an image from a file, decodes it into a dense tensor, and resizes it
+# to a fixed shape.
+def get_IMGDB_tfdataset(img_list_filename,
+                        subtract_mean=True,
+                        normalize_data=True):
+
+    def _parse_function(filename, label):
+        image_string = tf.read_file(filename)
+        image_decoded = tf.image.decode_png(image_string, channels=3)
+        #image_resized = tf.image.resize_images(image_decoded, [28, 28])
+        return image_decoded, label
+    
+    # A vector of filenames.
+    images_list, labels_list = fileio.parse_imgdb_list(txt_list=img_list_filename)
+    imgs = tf.constant(images_list)
+    
+    # `labels[i]` is the label for the image in `imgs[i]`.
+    labels = tf.constant(labels_list)
+    
+    dataset = tf.data.Dataset.from_tensor_slices((imgs, labels))
+    dataset = dataset.map(_parse_function) 
+    return dataset
 
 def main(argv):
 
@@ -68,13 +115,16 @@ def main(argv):
     # 2. 
     # Load a dataset
     #
-    cifar_data = data_utils.get_CIFAR10_data(args.data_dir,
-                                             subtract_mean=True,
-                                             normalize_data=True)
+    data = data_utils.get_some_data(
+        input_path=args.input_path,
+        input_path_imgdb_test=args.input_path_test,
+        dataset_name=args.dataset_name,
+        subtract_mean=True,
+        normalize_data=True)
 
-    data_utils.print_shape(cifar_data)
-    X_train, y_train, X_val, y_val, X_test, y_test = cifar_data
-    
+    data_utils.print_shape(data)
+    X_train, y_train, X_val, y_val, X_test, y_test = data
+
     # For a fully-connected net, reshape the samples to single rows.
     X_train = np.reshape(X_train,[X_train.shape[0], -1])
     X_val = np.reshape(X_val,[X_val.shape[0], -1])
@@ -89,12 +139,6 @@ def main(argv):
     #X_test, y_test = get_random_data()
     #data_utils.print_shape((X_test, y_test))
 
-    ## Configure training set for TF Dataset (optional)
-    #cifar10_train = tf.data.Dataset.from_tensor_slices((X_train, y_train))
-    #cifar10_train = cifar10_train.batch(args.batch_size).repeat()
-    ## Configure validation set for TF Dataset
-    #cifar10_val = tf.data.Dataset.from_tensor_slices((X_val, y_val))
-    #cifar10_val = cifar10_val.batch(args.batch_size).repeat()
 
     # 3.
     # Training
@@ -105,9 +149,9 @@ def main(argv):
         keras.callbacks.TensorBoard(
             log_dir='./logs_cifar_model_0/run_' + str(run_id))
     ]
-    mask = np.random.randint(0,49000,size=100)
-    X_train = X_train[mask]
-    y_train = y_train[mask]
+    #mask = np.random.randint(0,49000,size=100)
+    #X_train = X_train[mask]
+    #y_train = y_train[mask]
     cnn_model.fit(X_train, y_train, epochs=200,
                   batch_size=args.batch_size,
                   validation_data=(X_val,y_val),

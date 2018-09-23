@@ -7,6 +7,8 @@ import os
 from imageio import imread
 import platform
 
+from ompy import fileio
+
 def print_shape(data):
     try:
         d = iter(data)
@@ -56,30 +58,78 @@ def load_CIFAR10(ROOT):
     Xte, Yte = load_CIFAR_batch(os.path.join(ROOT, 'test_batch'))
     return Xtr, Ytr, Xte, Yte
 
-
-def get_CIFAR10_data(input_dir, 
-                     num_training=49000, num_validation=1000, num_test=10000,
-                     subtract_mean=False,
-                     normalize_data=False,
-                     channels_first=False):
+def load_IMGDB(txt_list, img_shape=[32,32,3]):
     """
-    Load the CIFAR-10 dataset from disk and perform preprocessing to prepare
-    it for classifiers. These are the same steps as we used for the SVM, but
-    condensed to a single function.
+    Load images from the IMGDB image list in txt_list and put them into
+    numpy arrays.
     """
-    # Load the raw CIFAR-10 data
-    X_train, y_train, X_test, y_test = load_CIFAR10(input_dir)
+    image_names, image_labels = fileio.parse_imgdb_list(txt_list=txt_list)
+    assert len(image_names) == len(image_labels)
+    num_images = len(image_names)
 
-    # Subsample the data
-    mask = list(range(num_training, num_training + num_validation))
-    X_val = X_train[mask]
-    y_val = y_train[mask]
-    mask = list(range(num_training))
-    X_train = X_train[mask]
-    y_train = y_train[mask]
-    mask = list(range(num_test))
-    X_test = X_test[mask]
-    y_test = y_test[mask]
+    image_labels = np.asarray(image_labels, dtype=np.float32)
+    image_tensor = np.empty([num_images, *img_shape])
+
+    for i in range(num_images):
+        try:
+            img = imread(image_names[i])
+            image_tensor[i] = img
+        except ValueError as error:
+            print('{}: {}'.format(i,error))
+            image_tensor = np.delete(image_tensor, i, axis=0)
+            image_labels = np.delete(image_labels, i)
+        except IndexError as error:
+            print(error)
+            if i > 1:
+                image_tensor = image_tensor[0:i-1]
+                image_labels = image_labels[0:i-1]
+            break
+
+    return image_tensor, image_labels
+
+def get_some_data(input_path, 
+                  input_path_imgdb_test=None,
+                  dataset_name=None,
+                  num_training=49000, num_validation=1000, num_test=10000,
+                  subtract_mean=False,
+                  normalize_data=False,
+                  channels_first=False):
+    """
+    Load the CIFAR-10 or IMGDB dataset from disk and perform preprocessing to prepare
+    it for classifiers. 
+    """
+    X_train= X_val= X_test = []
+    y_train= y_val= y_test = []
+
+    # Load the CIFAR-10 dataset
+    if dataset_name == 'cifar':
+
+        X_train, y_train, X_test, y_test = load_CIFAR10(input_path)
+
+        # Subsample the data
+        mask = list(range(num_training, num_training + num_validation))
+        X_val = X_train[mask]
+        y_val = y_train[mask]
+        mask = list(range(num_training))
+        X_train = X_train[mask]
+        y_train = y_train[mask]
+        mask = list(range(num_test))
+        X_test = X_test[mask]
+        y_test = y_test[mask]
+
+    # Load the IMGDB dataset
+    elif dataset_name == 'imgdb' and input_path_imgdb_test != None:
+        X, y = load_IMGDB(input_path)
+        num_training = int(X.shape[0] * 0.8)
+        X_train = X[:num_training]
+        y_train = y[:num_training]
+        X_val = X[num_training:]
+        y_val = y[num_training:]
+
+        X_test, y_test = load_IMGDB(input_path_imgdb_test)
+    else:
+        raise NotImplementedError
+
 
     # Normalize the data: subtract the mean image
     if subtract_mean:
