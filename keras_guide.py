@@ -75,22 +75,22 @@ def main(argv):
     #
 
     # Returns a placeholder tensor
-    inputs = keras.Input(shape=(3072,),
+    inputs = keras.Input(shape=(12288,),
                          batch_size=args.batch_size,
                          name='cifar_input_layer')
     
     x = keras.layers.Dense(
-            units=100,
+            units=400,
             kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
             activation='relu')(inputs)
 
     x = keras.layers.Dense(
-            units=100,
+            units=400,
             kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
             activation='relu')(x)
 
     x = keras.layers.Dense(
-            units=100,
+            units=400,
             kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
             activation='relu')(x)
 
@@ -100,9 +100,9 @@ def main(argv):
             activation='relu')(x)
 
     predictions = keras.layers.Dense(
-        units=10,
-        kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
-        activation='softmax')(x)
+            units=4,
+            kernel_regularizer=tf.keras.regularizers.l2(l=args.reg),
+            activation='softmax')(x)
     
     # Instantiate the model given inputs and outputs.
     cnn_model = keras.Model(inputs=inputs, outputs=predictions)

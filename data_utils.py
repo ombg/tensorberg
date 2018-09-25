@@ -119,14 +119,14 @@ def get_some_data(input_path,
 
     # Load the IMGDB dataset
     elif dataset_name == 'imgdb' and input_path_imgdb_test != None:
-        X, y = load_IMGDB(input_path)
-        num_training = int(X.shape[0] * 0.8)
+        X, y = load_IMGDB(input_path, img_shape=[64, 64, 3])
+        num_training = int(X.shape[0] * 0.773)
         X_train = X[:num_training]
         y_train = y[:num_training]
         X_val = X[num_training:]
         y_val = y[num_training:]
 
-        X_test, y_test = load_IMGDB(input_path_imgdb_test)
+        X_test, y_test = load_IMGDB(input_path_imgdb_test, img_shape=[64, 64, 3])
     else:
         raise NotImplementedError
 
