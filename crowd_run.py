@@ -1,15 +1,48 @@
 import tensorflow as tf
 import numpy as np
 import math
-import timeit
 import matplotlib.pyplot as plt
+import argparse
 
-from crowd_input import get_CIFAR10_data
+import data_utils
 
 from crowd_two import complex_model
 #from crowd_one import simple_model
 
-def run_model(session, predict, loss_val, Xd, yd,
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--input-path', 
+                    default='/tmp/cl_0123_ps_64_dm_55_sam_799_0_ppm.txt',
+                    type=str,
+                    help='Path which contains the dataset')
+
+parser.add_argument('--input-path-test', 
+                    default='/tmp/cl_0123_ps_64_dm_55_sam_799_1_ppm.txt',
+                    type=str,
+                    help=('Path which contains the test dataset.'
+                          'Mandatory for IMGDB dataset.'))
+
+parser.add_argument('--dataset-name',
+                    default='imgdb',
+                    type=str,
+                    help='Name of the dataset. Supported: CIFAR-10 or IMGDB')
+
+parser.add_argument('--batch-size', 
+                    default=100,
+                    type=int,
+                    help='batch size')
+
+parser.add_argument('--lr',
+                    default=1e-2,
+                    type=float,
+                    help='optimizer learning rate')
+
+parser.add_argument('--reg',
+                    default=1e-2,
+                    type=float,
+                    help='Scalar giving L2 regularization strength.')
+
+def run_model(session, X, y, is_training, predict, loss_val, Xd, yd,
               epochs=1, batch_size=64, print_every=100,
               training=None, plot_losses=False):
     # have tensorflow compute accuracy
@@ -24,7 +57,7 @@ def run_model(session, predict, loss_val, Xd, yd,
     
     # setting up variables we want to compute (and optimizing)
     # if we have a training function, add that to things we compute
-    variables = [mean_loss,correct_prediction,accuracy]
+    variables = [loss_val,correct_prediction,accuracy]
     if training_now:
         variables[-1] = training
     
@@ -73,44 +106,83 @@ def run_model(session, predict, loss_val, Xd, yd,
             plt.draw()
     return total_loss,total_correct
 
-# clear old variables
-tf.reset_default_graph()
+def main(argv):
 
-# Load CIFAR-10 dataset
-X_train, y_train, X_val, y_val, X_test, y_test = get_CIFAR10_data()
-print('Train data shape: ', X_train.shape)
-print('Train labels shape: ', y_train.shape)
-print('Validation data shape: ', X_val.shape)
-print('Validation labels shape: ', y_val.shape)
-print('Test data shape: ', X_test.shape)
-print('Test labels shape: ', y_test.shape)
+    # clear old variables
+    tf.reset_default_graph()
 
-# setup input (e.g. the data that changes every batch)
-# The first dim is None, and gets sets automatically based on batch size fed in
-X = tf.placeholder(tf.float32, [None, 32, 32, 3])
-y = tf.placeholder(tf.int64, [None])
-is_training = tf.placeholder(tf.bool)
+    # Some housekeeping
+    run_id = np.random.randint(1e6,size=1)[0]
+    print('run_id: {}'.format(run_id))
+    args = parser.parse_args()
+    print(args)
+    
+    # Load CIFAR-10 dataset
+    X_train, y_train, X_val, y_val, X_test, y_test = data_utils.get_some_data(
+        input_path=args.input_path,
+        dataset_name=args.dataset_name,
+        subtract_mean=True,
+        normalize_data=True)
+    
+    print('Train data shape: ', X_train.shape)
+    print('Train labels shape: ', y_train.shape)
+    print('Validation data shape: ', X_val.shape)
+    print('Validation labels shape: ', y_val.shape)
+    print('Test data shape: ', X_test.shape)
+    print('Test labels shape: ', y_test.shape)
+    
+    # setup input (e.g. the data that changes every batch)
+    # The first dim is None, and gets sets automatically based on batch size fed in
+    X = tf.placeholder(tf.float32, [None, 32, 32, 3])
+    y = tf.placeholder(tf.int64, [None])
+    is_training = tf.placeholder(tf.bool)
+    
+    # Specify the model you want to use
+    y_out = complex_model(X,y,is_training)
+    
+    # define our loss
+    #total_loss = tf.losses.hinge_loss(tf.one_hot(y,10),logits=y_out)
+    total_loss = tf.losses.softmax_cross_entropy(tf.one_hot(y,10),logits=y_out)
+    mean_loss = tf.reduce_mean(total_loss)
+    
+    # define our optimizer
+    optimizer = tf.train.AdamOptimizer(args.lr) # select optimizer and set learning rate
+    train_step = optimizer.minimize(mean_loss)
+    
+    # Start the session and invoke training and then validation.
+    with tf.Session() as sess:
+        with tf.device("/cpu:0"): #"/cpu:0" or "/gpu:0" 
+            sess.run(tf.global_variables_initializer())
+            print('Training')
+            run_model(sess,
+                      X=X,
+                      y=y,
+                      predict=y_out,
+                      loss_val=mean_loss,
+                      Xd=X_train,
+                      yd=y_train,
+                      epochs=3,
+                      batch_size=args.batch_size,
+                      print_every=100,
+                      training=train_step,
+                      plot_losses=True)
+            print('Validation')
+            run_model(sess,y_out,mean_loss,X_val,y_val,1,64)
+            run_model(sess,
+                      X=X,
+                      y=y,
+                      predict=y_out,
+                      loss=mean_loss,
+                      Xd=X_val,
+                      yd=y_val,
+                      epochs=1,
+                      batch_size=args.batch_size,
+                      print_every=100,
+                      training=train_step,
+                      plot_losses=True)
+            print('Done!')
+    
+    plt.show()
 
-# Specify the model you want to use
-y_out = complex_model(X,y,is_training)
-
-# define our loss
-#total_loss = tf.losses.hinge_loss(tf.one_hot(y,10),logits=y_out)
-total_loss = tf.losses.softmax_cross_entropy(tf.one_hot(y,10),logits=y_out)
-mean_loss = tf.reduce_mean(total_loss)
-
-# define our optimizer
-optimizer = tf.train.AdamOptimizer(5e-4) # select optimizer and set learning rate
-train_step = optimizer.minimize(mean_loss)
-
-# Start the session and invoke training and then validation.
-with tf.Session() as sess:
-    with tf.device("/cpu:0"): #"/cpu:0" or "/gpu:0" 
-        sess.run(tf.global_variables_initializer())
-        print('Training')
-        run_model(sess,y_out,mean_loss,X_train,y_train,3,64,100,train_step,True)
-        print('Validation')
-        run_model(sess,y_out,mean_loss,X_val,y_val,1,64)
-        print('Done!')
-
-plt.show()
+if __name__ == '__main__':
+    tf.app.run()

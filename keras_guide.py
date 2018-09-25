@@ -147,7 +147,7 @@ def main(argv):
     callbacks = [
         # Write TensorBoard logs to `./logs` directory
         keras.callbacks.TensorBoard(
-            log_dir='./logs_cifar_model_0/run_' + str(run_id))
+            log_dir='./logs_model_0/run_' + str(run_id))
     ]
     #mask = np.random.randint(0,49000,size=100)
     #X_train = X_train[mask]
