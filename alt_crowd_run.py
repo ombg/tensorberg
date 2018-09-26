@@ -31,8 +31,12 @@ class Model:
     def optimize(self):
         logprob = tf.log(self.prediction + 1e-12)
         cross_entropy = -tf.reduce_sum(self.label * logprob)
+        helpers.variable_summaries(cross_entropy)
+
+        # Global step is incremented whenever the graph sees a new batch
+        global_step=tf.train.get_or_create_global_step()
         optimizer = tf.train.RMSPropOptimizer(0.03)
-        return optimizer.minimize(cross_entropy)
+        return optimizer.minimize(cross_entropy, global_step=global_step)
 
     @helpers.define_scope
     def error(self):
@@ -57,20 +61,32 @@ def main():
     model = Model(image, label)
 
     merged = tf.summary.merge_all()
+    global_step = tf.train.get_global_step()
     sess = tf.Session()
-    train_writer = tf.summary.FileWriter(args.logdir, sess.graph)
-    test_writer = tf.summary.FileWriter(args.logdir) #TODO why no sess.graph?
+    train_writer = tf.summary.FileWriter(args.logdir + '_train', sess.graph)
+    test_writer = tf.summary.FileWriter(args.logdir + '_test') #TODO why no sess.graph?
 
     tf.global_variables_initializer().run(session=sess)
 
     for i in range(10):
+        # Load the dataset
         images, labels = mnist.test.images, mnist.test.labels
-        summary, error = sess.run([merged, model.error], {image: images, label: labels})
-        test_writer.add_summary(summary, i)
+
+        summary_test, error, global_step_vl = sess.run(
+            [merged, model.error, global_step],
+            {image: images, label: labels})
+
+        test_writer.add_summary(summary_test, global_step=global_step_vl)
+
         print('Test error {:6.2f}%'.format(100 * error))
         for _ in range(60):
             images, labels = mnist.train.next_batch(100)
-            sess.run(model.optimize, {image: images, label: labels})
+
+            summary_train, _, global_step_vl = sess.run(
+                [merged, model.optimize, global_step],
+                {image: images, label: labels})
+
+            train_writer.add_summary(summary_train, global_step=global_step_vl)
 
     train_writer.close()
     test_writer.close()
