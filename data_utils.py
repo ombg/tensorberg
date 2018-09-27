@@ -8,6 +8,7 @@ from imageio import imread
 import platform
 
 from ompy import fileio
+from ompy import ml
 
 def print_shape(data):
     try:
@@ -91,9 +92,11 @@ def get_some_data(input_path,
                   input_path_imgdb_test=None,
                   dataset_name=None,
                   num_training=49000, num_validation=1000, num_test=10000,
-                  subtract_mean=False,
-                  normalize_data=False,
-                  channels_first=False):
+                  subtract_mean=True,
+                  normalize_data=True,
+                  channels_first=True,
+                  reshape_data=True,
+                  one_hot=True):
     """
     Load the CIFAR-10 or IMGDB dataset from disk and perform preprocessing to prepare
     it for classifiers. 
@@ -143,12 +146,23 @@ def get_some_data(input_path,
         X_val = X_val / 255.0
         X_test = X_test / 255.0
 
-
     # Transpose so that channels come first
     if channels_first:
         X_train = X_train.transpose(0, 3, 1, 2).copy()
         X_val = X_val.transpose(0, 3, 1, 2).copy()
         X_test = X_test.transpose(0, 3, 1, 2).copy()
+
+    # For a fully-connected net, reshape the samples to single rows.
+    if reshape_data:
+        X_train = np.reshape(X_train,[X_train.shape[0], -1])
+        X_val = np.reshape(X_val,[X_val.shape[0], -1])
+        X_test = np.reshape(X_test,[X_test.shape[0], -1])
+    
+    # One-hot encode the labels
+    if one_hot:
+        y_train = ml.makeonehot(y_train)
+        y_val = ml.makeonehot(y_val)
+        y_test = ml.makeonehot(y_test)
 
     return (X_train, y_train, X_val, y_val, X_test, y_test)
 
