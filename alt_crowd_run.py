@@ -5,7 +5,6 @@ from tensorflow.examples.tutorials.mnist import input_data
 
 # standard libs
 import argparse
-from tqdm import trange
 
 
 # local libs
@@ -19,17 +18,22 @@ class Model:
         self.label = label
         self.prediction
         self.optimize
-        self.error
+        self.evaluate
 
-    @helpers.define_scope(initializer=tf.contrib.slim.xavier_initializer())
+    @helpers.define_scope(initializer=tf.glorot_uniform_initializer())
     def prediction(self):
+
         x = self.image
+        x = tf.layers.dense(inputs=x, units=200, activation=tf.nn.relu)
+        x = tf.layers.dense(inputs=x, units=200, activation=tf.nn.relu)
         x = tf.layers.dense(inputs=x, units=200, activation=tf.nn.relu)
         x = tf.layers.dense(inputs=x, units=10, activation=None)
         return x
 
+
     @helpers.define_scope
     def optimize(self):
+
         cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(
             labels=self.label,
             logits=self.prediction)
@@ -39,19 +43,20 @@ class Model:
 
         # Global step is incremented whenever the graph sees a new batch
         global_step=tf.train.get_or_create_global_step()
-        optimizer = tf.train.RMSPropOptimizer(0.03)
+        optimizer = tf.train.AdamOptimizer(5e-4)
 
         return (total_loss,
             optimizer.minimize(total_loss, global_step=global_step))
 
+
     @helpers.define_scope
-    def error(self):
-        mistakes = tf.not_equal(
+    def evaluate(self):
+        truth_value = tf.math.equal(
             tf.argmax(self.label, 1), tf.argmax(self.prediction, 1))
-        mistakes = tf.reduce_mean(tf.cast(mistakes, tf.float32))
-        # Log a lot of stuff for `mistakes` in tensorboard.
-        helpers.variable_summaries(mistakes)
-        return mistakes
+        accuracy = tf.reduce_mean(tf.cast(truth_value, tf.float32))
+        # Log a lot of stuff for op `accuracy` in tensorboard.
+        helpers.variable_summaries(accuracy)
+        return accuracy
 
 def main(argv):
 
@@ -59,13 +64,15 @@ def main(argv):
 #    print('run_id: {}'.format(run_id))
     args = parser.parse_args(argv[1:])
     print(args)
-
+    print('Loading data...')
     # Load data as numpy array
     data = data_utils.get_some_data(args.input_path,
                                     dataset_name=args.dataset_name)
 
+    data_utils.print_shape(data)
     X_train, y_train, X_val, y_val, X_test, y_test = data
 
+    print('Initializing data...')
     # create a placeholder to dynamically switch between batch sizes
     batch_size_placeholder = tf.placeholder(tf.int64)
     # Initialize corresponding tf.placeholders and a tf.data.Dataset
@@ -92,6 +99,7 @@ def main(argv):
     train_init_op = iterator.make_initializer(train_dataset)
     # Define model
     #model = Model(images_placeholder, labels_placeholder)
+    print('Setting up the model...')
     model = Model(image=features, label=labels)
 
     # Until now the iterator is not bound to a dataset and is uninitialized.
@@ -108,13 +116,14 @@ def main(argv):
     # Initialize all variables
     sess.run(tf.global_variables_initializer())
     # Initialize iterator with training data
+    # This is the correct way when using numpy arrays (which fit into memory)
     sess.run(train_init_op, feed_dict= { images_placeholder: X_train,
                                          labels_placeholder: y_train,
                                          batch_size_placeholder: args.batch_size})
 
-    print('Finished setup. Starting training now!')
+    print(' Starting training now!')
     for i in range(400):
-        # Monitor the training every 50 steps
+        # Monitor the training every 10 steps
         if i % 10 == 0:
             loss_vl, summary_train, global_step_vl = sess.run(
                 [model.optimize, merged_sm, global_step])
@@ -122,7 +131,11 @@ def main(argv):
             train_writer.add_summary(summary_train, global_step=global_step_vl)
 
         else:
-            loss_vl = sess.run([model.optimize])
+            loss_vl, _ = sess.run([model.optimize, global_step])
+
+        if i % 100 == 0:
+            accuracy = sess.run(model.evaluate) 
+            print('Training-set accuracy {:6.2f}%'.format(100 * accuracy))
 
     train_writer.close()
     test_writer.close()
@@ -175,3 +188,4 @@ if __name__ == '__main__':
 
     # Starting the program
     tf.app.run()
+    print('Done!')
