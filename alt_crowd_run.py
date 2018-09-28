@@ -53,11 +53,11 @@ class Model:
         helpers.variable_summaries(mistakes)
         return mistakes
 
-def main():
+def main(argv):
 
 #    run_id = np.random.randint(1e6,size=1)[0]
 #    print('run_id: {}'.format(run_id))
-    args = parser.parse_args()
+    args = parser.parse_args(argv[1:])
     print(args)
 
     # Load data as numpy array
@@ -66,13 +66,17 @@ def main():
 
     X_train, y_train, X_val, y_val, X_test, y_test = data
 
+    # create a placeholder to dynamically switch between batch sizes
+    batch_size_placeholder = tf.placeholder(tf.int64)
     # Initialize corresponding tf.placeholders and a tf.data.Dataset
     images_placeholder = tf.placeholder(X_train.dtype, [None, 3072])
     labels_placeholder = tf.placeholder(y_train.dtype, [None, 10])
 
     train_dataset = tf.data.Dataset.from_tensor_slices(
-        (images_placeholder, labels_placeholder)).batch(args.batch_size).repeat()
-    # OMG, WHY, oh why you MUST call batch().repeat()??????????
+        (images_placeholder, labels_placeholder))
+    # Adding the batch_size as an outer dimension. Repeat after 1 epoch
+    train_dataset = train_dataset.batch(args.batch_size).repeat()
+
     # TODO Here you could further preprocess your data !!
 
     # Create an uninitializaed iterator which can be reused with
@@ -85,50 +89,40 @@ def main():
     # TODO Is this one batch?
     features, labels = iterator.get_next(name='my_iterator')
 
+    train_init_op = iterator.make_initializer(train_dataset)
     # Define model
     #model = Model(images_placeholder, labels_placeholder)
     model = Model(image=features, label=labels)
 
     # Until now the iterator is not bound to a dataset and is uninitialized.
     # Therefore, we now create init_ops. Later, a session runs these init_ops.
-    merged = tf.summary.merge_all()
+    merged_sm = tf.summary.merge_all()
     global_step = tf.train.get_global_step()
+
+    # Create the session
     sess = tf.Session()
     train_writer = tf.summary.FileWriter(args.logdir + '_train', sess.graph)
     test_writer = tf.summary.FileWriter(args.logdir + '_test')
     #TODO why no sess.graph as last argument?
 
-    tf.global_variables_initializer().run(session=sess)
+    # Initialize all variables
+    sess.run(tf.global_variables_initializer())
+    # Initialize iterator with training data
+    sess.run(train_init_op, feed_dict= { images_placeholder: X_train,
+                                         labels_placeholder: y_train,
+                                         batch_size_placeholder: args.batch_size})
 
-    for i in t:
-        # Load the dataset
-        images, labels = mnist.test.images, mnist.test.labels
-
-        summary_test, error, global_step_vl = sess.run(
-            [merged, model.error, global_step],
-            {images_placeholder: images, labels_placeholder: labels})
-
-        test_writer.add_summary(summary_test, global_step=global_step_vl)
-
-        print('Test error {:6.2f}%'.format(100 * error))
-    # Use tqdm progress bar => trange()
-    t = trange(1)
-    for i in range(num_steps):
-        images, labels = mnist.train.next_batch(args.batch_size)
-
-        if i % 50 == 0:
-            summary_train, loss_vl, global_step_vl = sess.run(
-                [merged, model.optimize, global_step],
-                {images_placeholder: images, labels_placeholder: labels})
+    print('Finished setup. Starting training now!')
+    for i in range(400):
+        # Monitor the training every 50 steps
+        if i % 10 == 0:
+            loss_vl, summary_train, global_step_vl = sess.run(
+                [model.optimize, merged_sm, global_step])
             print('#{}: loss: {:6.2f}'.format(global_step_vl, loss_vl[0]))
             train_writer.add_summary(summary_train, global_step=global_step_vl)
 
         else:
-            loss_vl = sess.run(
-                [model.optimize],
-                {images_placeholder: images, labels_placeholder: labels}) 
-
-        t.set_postfix(loss='{:05.3f}'.format(loss_vl[0]))
+            loss_vl = sess.run([model.optimize])
 
     train_writer.close()
     test_writer.close()
@@ -174,4 +168,10 @@ if __name__ == '__main__':
                         type=str,
                         help='Log directory for TensorBoard.')
 
-    main()
+    parser.add_argument('--epochs',
+                        default=10,
+                        type=int,
+                        help='Train for this number of epochs.')
+
+    # Starting the program
+    tf.app.run()
