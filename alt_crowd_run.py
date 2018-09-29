@@ -73,6 +73,7 @@ def main(argv):
     X_train, y_train, X_val, y_val, X_test, y_test = data
 
     print('Initializing data...')
+    num_batches = len(X_train) // args.batch_size
     # create a placeholder to dynamically switch between batch sizes
     batch_size_placeholder = tf.placeholder(tf.int64)
     # Initialize corresponding tf.placeholders and a tf.data.Dataset
@@ -125,25 +126,24 @@ def main(argv):
                                          batch_size_placeholder: args.batch_size})
 
     print(' Starting training now!')
-    for i in range(400):
+    for i in range(args.epochs):
 
-        # Monitor the training ones in a while
-        if i % 10 == 0:
-            fetches = [model.optimize, model.evaluate, merged_sm, global_step]
-
-            loss_vl, train_acc, summary_train, global_step_vl = sess.run(fetches)
-            print('#{}: loss: {:6.2f} train_acc: {:6.2f}%'.format(global_step_vl,
-                                loss_vl[0], train_acc*100.0))
-
-            train_writer.add_summary(summary_train, global_step=global_step_vl)
-
-        else:
+        for _ in range(num_batches):
             sess.run([model.optimize, global_step])
 
+        # Monitor the training after every epoch
+        fetches = [model.optimize, model.evaluate, merged_sm, global_step]
+        loss_vl, train_acc, summary_train, global_step_vl = sess.run(fetches)
+        train_writer.add_summary(summary_train, global_step=global_step_vl)
+
+        print('#{}: loss: {:6.2f} train_acc: {:6.2f}%'.format(
+            global_step_vl,
+            loss_vl[0], train_acc*100.0))
+    # Initialize iterator with test data
     sess.run(test_init_op, feed_dict= { images_placeholder: X_test,
                                         labels_placeholder: y_test,
                                         batch_size_placeholder: len(y_test) })
-    # Test model on test data set
+    # Test the model on test data set
     print('Test accuracy: {:6.2f}%'.format(sess.run(model.evaluate) * 100.0))
     train_writer.close()
 
