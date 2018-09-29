@@ -74,25 +74,22 @@ def main(argv):
 
     print('Initializing data...')
     num_batches = len(X_train) // args.batch_size
+    num_classes = len(np.unique(y_train))
     print('Number of batches per epoch: %d' % num_batches)
-    # create a placeholder to dynamically switch between batch sizes
-    batch_size_placeholder = tf.placeholder(tf.int64)
-    # Initialize corresponding tf.placeholders and a tf.data.Dataset
-    images_placeholder = tf.placeholder(X_train.dtype, [None, 3072])
-    labels_placeholder = tf.placeholder(y_train.dtype, [None, 10])
 
-    train_dataset = tf.data.Dataset.from_tensor_slices(
-        (images_placeholder, labels_placeholder))
-    # Adding the batch_size as an outer dimension. Repeat after 1 epoch
-    train_dataset = train_dataset.batch(args.batch_size).repeat()
+    train_dataset_x = tf.data.Dataset.from_tensor_slices(X_train)
+    train_dataset_y = tf.data.Dataset.from_tensor_slices(y_train).map(
+        lambda z: tf.one_hot(z, 10))
+    train_dataset = tf.data.Dataset.zip((train_dataset_x, train_dataset_y))
+    # TODO Use shuffle()?
+    train_dataset = train_dataset.repeat().batch(args.batch_size)
 
-    val_dataset = tf.data.Dataset.from_tensor_slices(
-        (images_placeholder, labels_placeholder))
-    val_dataset = val_dataset.batch(args.batch_size).repeat()
-
-    test_dataset = tf.data.Dataset.from_tensor_slices(
-        (images_placeholder, labels_placeholder))
-    test_dataset = test_dataset.batch(args.batch_size).repeat()
+    val_dataset_x = tf.data.Dataset.from_tensor_slices(X_val)
+    val_dataset_y = tf.data.Dataset.from_tensor_slices(y_val).map(
+        lambda z: tf.one_hot(z, 10))
+    val_dataset = tf.data.Dataset.zip((val_dataset_x, val_dataset_y))
+    # TODO Use shuffle()?
+    val_dataset = val_dataset.repeat().batch(args.batch_size)
 
     # TODO Here you could further preprocess your data !!
 
@@ -104,42 +101,35 @@ def main(argv):
 
     #This gets the next element from the iterator.
     # Note, it does not depend on train or test set.
-    features, labels = iterator.get_next(name='my_iterator')
-
-    train_init_op = iterator.make_initializer(train_dataset)
-    val_init_op = iterator.make_initializer(val_dataset)
-    test_init_op = iterator.make_initializer(test_dataset)
-
-    # Define model
-    #model = Model(images_placeholder, labels_placeholder)
-    print('Setting up the model...')
-    model = Model(image=features, label=labels)
+    features, labels = iterator.get_next()
 
     # Until now the iterator is not bound to a dataset and is uninitialized.
     # Therefore, we now create init_ops. Later, a session runs these init_ops.
-    merged_sm = tf.summary.merge_all()
-    global_step = tf.train.get_global_step()
+    train_init_op = iterator.make_initializer(train_dataset)
+    val_init_op = iterator.make_initializer(val_dataset)
 
-    # Create the session
-    sess = tf.Session()
+    #
+    # Define a model
+    print('Setting up the model...')
+    model = Model(image=features, label=labels)
+
     train_writer = tf.summary.FileWriter( 
         args.logdir + '/run_' + str(run_id) + '/train', sess.graph)
+    global_step = tf.train.get_global_step()
+    merged_sm = tf.summary.merge_all()
 
+
+    #
+    # Create the session
+    sess = tf.Session()
     # Initialize all variables
     sess.run(tf.global_variables_initializer())
-
-    train_dict= { images_placeholder: X_train,
-                  labels_placeholder: y_train,
-                  batch_size_placeholder: args.batch_size}
-    val_dict=   { images_placeholder: X_val,
-                  labels_placeholder: y_val,
-                  batch_size_placeholder: len(y_val) }
 
     print(' Starting training now!')
     for i in range(args.epochs):
 
         # Initialize iterator with training data
-        sess.run(train_init_op, feed_dict=train_dict)
+        sess.run(train_init_op)
         for _ in range(num_batches):
             sess.run([model.optimize, global_step])
 
@@ -156,13 +146,6 @@ def main(argv):
             train_acc*100.0,
             val_acc*100.0))
 
-    # Initialize iterator with test data
-    # Test the model on test data set
-    test_dict=   { images_placeholder: X_test,
-                   labels_placeholder: y_test,
-                   batch_size_placeholder: len(y_test) }
-    sess.run(test_init_op, feed_dict=test_dict)
-    print('Test accuracy: {:6.2f}%'.format(sess.run(model.evaluate) * 100.0))
     train_writer.close()
 
 if __name__ == '__main__':
