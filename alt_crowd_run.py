@@ -84,6 +84,9 @@ def main(argv):
     # Adding the batch_size as an outer dimension. Repeat after 1 epoch
     train_dataset = train_dataset.batch(args.batch_size).repeat()
 
+    test_dataset = tf.data.Dataset.from_tensor_slices(
+        (images_placeholder, labels_placeholder)).batch(args.batch_size)
+
     # TODO Here you could further preprocess your data !!
 
     # Create an uninitializaed iterator which can be reused with
@@ -93,10 +96,12 @@ def main(argv):
 
 
     #This gets the next element from the iterator.
-    # TODO Is this one batch?
+    # Note, it does not depend on train or test set.
     features, labels = iterator.get_next(name='my_iterator')
 
     train_init_op = iterator.make_initializer(train_dataset)
+    test_init_op = iterator.make_initializer(test_dataset)
+
     # Define model
     #model = Model(images_placeholder, labels_placeholder)
     print('Setting up the model...')
@@ -110,8 +115,6 @@ def main(argv):
     # Create the session
     sess = tf.Session()
     train_writer = tf.summary.FileWriter(args.logdir + '_train', sess.graph)
-    test_writer = tf.summary.FileWriter(args.logdir + '_test')
-    #TODO why no sess.graph as last argument?
 
     # Initialize all variables
     sess.run(tf.global_variables_initializer())
@@ -137,8 +140,12 @@ def main(argv):
         else:
             sess.run([model.optimize, global_step])
 
+    sess.run(test_init_op, feed_dict= { images_placeholder: X_test,
+                                        labels_placeholder: y_test,
+                                        batch_size_placeholder: len(y_test) })
+    # Test model on test data set
+    print('Test accuracy: {:6.2f}%'.format(sess.run(model.evaluate) * 100.0))
     train_writer.close()
-    test_writer.close()
 
 if __name__ == '__main__':
 
