@@ -57,6 +57,10 @@ def load_CIFAR10(ROOT):
     Ytr = np.concatenate(ys)
     del X, Y
     Xte, Yte = load_CIFAR_batch(os.path.join(ROOT, 'test_batch'))
+
+    # Cast elements of labels vectors to integers
+    Ytr = Ytr.astype(int)
+    Yte = Yte.astype(int)
     return Xtr, Ytr, Xte, Yte
 
 def load_IMGDB(txt_list, img_shape=[32,32,3]):
@@ -68,7 +72,7 @@ def load_IMGDB(txt_list, img_shape=[32,32,3]):
     assert len(image_names) == len(image_labels)
     num_images = len(image_names)
 
-    image_labels = np.asarray(image_labels, dtype=np.float32)
+    image_labels = np.asarray(image_labels, dtype=np.int32)
     image_tensor = np.empty([num_images, *img_shape])
 
     for i in range(num_images):
@@ -96,7 +100,7 @@ def get_some_data(input_path,
                   normalize_data=True,
                   channels_first=True,
                   reshape_data=True,
-                  one_hot=True):
+                  one_hot=False):
     """
     Load the CIFAR-10 or IMGDB dataset from disk and perform preprocessing to prepare
     it for classifiers. 

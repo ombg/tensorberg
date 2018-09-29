@@ -113,8 +113,6 @@ def main(argv):
     print('Setting up the model...')
     model = Model(image=features, label=labels)
 
-    train_writer = tf.summary.FileWriter( 
-        args.logdir + '/run_' + str(run_id) + '/train', sess.graph)
     global_step = tf.train.get_global_step()
     merged_sm = tf.summary.merge_all()
 
@@ -125,6 +123,8 @@ def main(argv):
     # Initialize all variables
     sess.run(tf.global_variables_initializer())
 
+    train_writer = tf.summary.FileWriter( 
+        args.logdir + '/run_' + str(run_id) + '/train', sess.graph)
     print(' Starting training now!')
     for i in range(args.epochs):
 
@@ -138,7 +138,7 @@ def main(argv):
         loss_vl, train_acc, summary_train, global_step_vl = sess.run(fetches)
         train_writer.add_summary(summary_train, global_step=global_step_vl)
 
-        sess.run(val_init_op, feed_dict=val_dict)
+        sess.run(val_init_op)
         val_acc = sess.run(model.evaluate)
         print('#{}: loss: {:5.2f} train_acc: {:5.2f}% val_acc: {:5.2f}%'.format(
             global_step_vl,
