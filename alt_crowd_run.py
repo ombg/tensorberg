@@ -74,6 +74,7 @@ def main(argv):
 
     print('Initializing data...')
     num_batches = len(X_train) // args.batch_size
+    print('Number of batches per epoch: %d' % num_batches)
     # create a placeholder to dynamically switch between batch sizes
     batch_size_placeholder = tf.placeholder(tf.int64)
     # Initialize corresponding tf.placeholders and a tf.data.Dataset
@@ -85,8 +86,13 @@ def main(argv):
     # Adding the batch_size as an outer dimension. Repeat after 1 epoch
     train_dataset = train_dataset.batch(args.batch_size).repeat()
 
+    val_dataset = tf.data.Dataset.from_tensor_slices(
+        (images_placeholder, labels_placeholder))
+    val_dataset = val_dataset.batch(args.batch_size).repeat()
+
     test_dataset = tf.data.Dataset.from_tensor_slices(
-        (images_placeholder, labels_placeholder)).batch(args.batch_size)
+        (images_placeholder, labels_placeholder))
+    test_dataset = test_dataset.batch(args.batch_size).repeat()
 
     # TODO Here you could further preprocess your data !!
 
@@ -101,6 +107,7 @@ def main(argv):
     features, labels = iterator.get_next(name='my_iterator')
 
     train_init_op = iterator.make_initializer(train_dataset)
+    val_init_op = iterator.make_initializer(val_dataset)
     test_init_op = iterator.make_initializer(test_dataset)
 
     # Define model
@@ -119,15 +126,19 @@ def main(argv):
 
     # Initialize all variables
     sess.run(tf.global_variables_initializer())
-    # Initialize iterator with training data
-    # This is the correct way when using numpy arrays (which fit into memory)
-    sess.run(train_init_op, feed_dict= { images_placeholder: X_train,
-                                         labels_placeholder: y_train,
-                                         batch_size_placeholder: args.batch_size})
+
+    train_dict= { images_placeholder: X_train,
+                  labels_placeholder: y_train,
+                  batch_size_placeholder: args.batch_size}
+    val_dict=   { images_placeholder: X_val,
+                  labels_placeholder: y_val,
+                  batch_size_placeholder: len(y_val) }
 
     print(' Starting training now!')
     for i in range(args.epochs):
 
+        # Initialize iterator with training data
+        sess.run(train_init_op, feed_dict=train_dict)
         for _ in range(num_batches):
             sess.run([model.optimize, global_step])
 
@@ -136,14 +147,20 @@ def main(argv):
         loss_vl, train_acc, summary_train, global_step_vl = sess.run(fetches)
         train_writer.add_summary(summary_train, global_step=global_step_vl)
 
-        print('#{}: loss: {:6.2f} train_acc: {:6.2f}%'.format(
+        sess.run(val_init_op, feed_dict=val_dict)
+        val_acc = sess.run(model.evaluate)
+        print('#{}: loss: {:5.2f} train_acc: {:5.2f}% val_acc: {:5.2f}%'.format(
             global_step_vl,
-            loss_vl[0], train_acc*100.0))
+            loss_vl[0],
+            train_acc*100.0,
+            val_acc*100.0))
+
     # Initialize iterator with test data
-    sess.run(test_init_op, feed_dict= { images_placeholder: X_test,
-                                        labels_placeholder: y_test,
-                                        batch_size_placeholder: len(y_test) })
     # Test the model on test data set
+    test_dict=   { images_placeholder: X_test,
+                   labels_placeholder: y_test,
+                   batch_size_placeholder: len(y_test) }
+    sess.run(test_init_op, feed_dict=test_dict)
     print('Test accuracy: {:6.2f}%'.format(sess.run(model.evaluate) * 100.0))
     train_writer.close()
 
