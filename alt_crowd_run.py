@@ -1,11 +1,11 @@
 # Working example for my blog post at:
 # https://danijar.github.io/structuring-your-tensorflow-models
 import tensorflow as tf
+import numpy as np
 from tensorflow.examples.tutorials.mnist import input_data
 
 # standard libs
 import argparse
-
 
 # local libs
 import helpers
@@ -60,8 +60,8 @@ class Model:
 
 def main(argv):
 
-#    run_id = np.random.randint(1e6,size=1)[0]
-#    print('run_id: {}'.format(run_id))
+    run_id = np.random.randint(1e6,size=1)[0]
+    print('run_id: {}'.format(run_id))
     args = parser.parse_args(argv[1:])
     print(args)
     print('Loading data...')
@@ -122,7 +122,8 @@ def main(argv):
 
     # Create the session
     sess = tf.Session()
-    train_writer = tf.summary.FileWriter(args.logdir + '_train', sess.graph)
+    train_writer = tf.summary.FileWriter( 
+        args.logdir + '/run_' + str(run_id) + '/train', sess.graph)
 
     # Initialize all variables
     sess.run(tf.global_variables_initializer())
