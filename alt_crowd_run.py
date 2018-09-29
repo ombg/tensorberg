@@ -38,15 +38,15 @@ class Model:
             labels=self.label,
             logits=self.prediction)
 
-        total_loss = tf.reduce_mean(cross_entropy)
-        helpers.variable_summaries(total_loss)
+        loss = tf.reduce_mean(cross_entropy)
+        tf.summary.scalar('loss', loss)
 
         # Global step is incremented whenever the graph sees a new batch
         global_step=tf.train.get_or_create_global_step()
         optimizer = tf.train.AdamOptimizer(5e-4)
 
-        return (total_loss,
-            optimizer.minimize(total_loss, global_step=global_step))
+        return (loss,
+                optimizer.minimize(loss, global_step=global_step))
 
 
     @helpers.define_scope
@@ -55,7 +55,7 @@ class Model:
             tf.argmax(self.label, 1), tf.argmax(self.prediction, 1))
         accuracy = tf.reduce_mean(tf.cast(truth_value, tf.float32))
         # Log a lot of stuff for op `accuracy` in tensorboard.
-        helpers.variable_summaries(accuracy)
+        tf.summary.scalar('accuracy', accuracy)
         return accuracy
 
 def main(argv):
@@ -123,19 +123,19 @@ def main(argv):
 
     print(' Starting training now!')
     for i in range(400):
-        # Monitor the training every 10 steps
+
+        # Monitor the training ones in a while
         if i % 10 == 0:
-            loss_vl, summary_train, global_step_vl = sess.run(
-                [model.optimize, merged_sm, global_step])
-            print('#{}: loss: {:6.2f}'.format(global_step_vl, loss_vl[0]))
+            fetches = [model.optimize, model.evaluate, merged_sm, global_step]
+
+            loss_vl, train_acc, summary_train, global_step_vl = sess.run(fetches)
+            print('#{}: loss: {:6.2f} train_acc: {:6.2f}%'.format(global_step_vl,
+                                loss_vl[0], train_acc*100.0))
+
             train_writer.add_summary(summary_train, global_step=global_step_vl)
 
         else:
-            loss_vl, _ = sess.run([model.optimize, global_step])
-
-        if i % 100 == 0:
-            accuracy = sess.run(model.evaluate) 
-            print('Training-set accuracy {:6.2f}%'.format(100 * accuracy))
+            sess.run([model.optimize, global_step])
 
     train_writer.close()
     test_writer.close()

@@ -39,18 +39,19 @@ def define_scope(function, scope=None, *args, **kwargs):
     return decorator
 
 
-def variable_summaries(var):
-    """
-    Attach a lot of summaries to a Tensor
-    (for TensorBoard visualization).
-    """
-    with tf.name_scope('summaries'):
-        mean = tf.reduce_mean(var)
-        tf.summary.scalar('mean', mean)
-        with tf.name_scope('stddev'):
-            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-        tf.summary.scalar('stddev', stddev)
-        tf.summary.scalar('max', tf.reduce_max(var))
-        tf.summary.scalar('min', tf.reduce_min(var))
-        tf.summary.histogram('histogram', var)
+#def variable_summaries(var, name='summaries'):
+#    """
+#    Attach a lot of summaries to a Tensor
+#    (for TensorBoard visualization).
+#    """
+#    with tf.name_scope(name):
+#        mean = tf.reduce_mean(var)
+#        tf.summary.scalar('mean', mean)
+#        with tf.name_scope('stddev'):
+#            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+#        tf.summary.scalar('stddev', stddev)
+#        tf.summary.scalar('max', tf.reduce_max(var))
+#        tf.summary.scalar('min', tf.reduce_min(var))
+#        tf.summary.scalar(name, var)
+#        tf.summary.histogram(name, var)
 
