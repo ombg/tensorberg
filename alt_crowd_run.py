@@ -26,7 +26,6 @@ class Model:
         x = self.image
         x = tf.layers.dense(inputs=x, units=200, activation=tf.nn.relu)
         x = tf.layers.dense(inputs=x, units=200, activation=tf.nn.relu)
-        x = tf.layers.dense(inputs=x, units=200, activation=tf.nn.relu)
         x = tf.layers.dense(inputs=x, units=10, activation=None)
         return x
 
@@ -81,14 +80,14 @@ def main(argv):
     train_dataset_y = tf.data.Dataset.from_tensor_slices(y_train).map(
         lambda z: tf.one_hot(z, 10))
     train_dataset = tf.data.Dataset.zip((train_dataset_x, train_dataset_y))
-    # TODO Use shuffle()?
+    train_dataset = train_dataset.shuffle(buffer_size=len(X_train))
     train_dataset = train_dataset.repeat().batch(args.batch_size)
 
     val_dataset_x = tf.data.Dataset.from_tensor_slices(X_val)
     val_dataset_y = tf.data.Dataset.from_tensor_slices(y_val).map(
         lambda z: tf.one_hot(z, 10))
     val_dataset = tf.data.Dataset.zip((val_dataset_x, val_dataset_y))
-    # TODO Use shuffle()?
+    val_dataset = val_dataset.shuffle(buffer_size=len(X_val))
     val_dataset = val_dataset.repeat().batch(args.batch_size)
 
     # TODO Here you could further preprocess your data !!
