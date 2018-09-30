@@ -114,7 +114,7 @@ def main(argv):
     model = Model(image=features, label=labels)
 
     global_step = tf.train.get_global_step()
-    merged_sm = tf.summary.merge_all()
+    write_op = tf.summary.merge_all()
 
 
     #
@@ -125,28 +125,36 @@ def main(argv):
 
     train_writer = tf.summary.FileWriter( 
         args.logdir + '/run_' + str(run_id) + '/train', sess.graph)
+    val_writer = tf.summary.FileWriter( 
+        args.logdir + '/run_' + str(run_id) + '/val', sess.graph)
     print(' Starting training now!')
     for i in range(args.epochs):
 
         # Initialize iterator with training data
         sess.run(train_init_op)
         for _ in range(num_batches):
+            #TODO global_step not needed here(?)
             sess.run([model.optimize, global_step])
 
         # Monitor the training after every epoch
-        fetches = [model.optimize, model.evaluate, merged_sm, global_step]
+        fetches = [model.optimize, model.evaluate, write_op, global_step]
         loss_vl, train_acc, summary_train, global_step_vl = sess.run(fetches)
         train_writer.add_summary(summary_train, global_step=global_step_vl)
+        train_writer.flush()
 
         sess.run(val_init_op)
-        val_acc = sess.run(model.evaluate)
+        fetches_val = [model.evaluate, write_op, global_step]
+        val_acc, summary_val, global_step_vl = sess.run(fetches_val)
         print('#{}: loss: {:5.2f} train_acc: {:5.2f}% val_acc: {:5.2f}%'.format(
             global_step_vl,
             loss_vl[0],
             train_acc*100.0,
             val_acc*100.0))
+        val_writer.add_summary(summary_val, global_step=global_step_vl)
+        val_writer.flush()
 
     train_writer.close()
+    val_writer.close()
 
 if __name__ == '__main__':
 
