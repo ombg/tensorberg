@@ -24,10 +24,34 @@ class Model:
     def prediction(self):
 
         x = self.image
-        x = tf.layers.dense(inputs=x, units=200, activation=tf.nn.relu)
-        x = tf.layers.dense(inputs=x, units=200, activation=tf.nn.relu)
-        x = tf.layers.dense(inputs=x, units=10, activation=None)
-        return x
+        conv1 = tf.layers.conv2d(inputs=x, filters=32, kernel_size=[7,7],
+                                 strides=[1,1], padding='valid',
+                                 activation=tf.nn.relu,
+                                 name='conv1')
+
+        kernel = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'prediction/conv1/kernel')[0]
+        bias   = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'prediction/conv1/bias')[0]
+
+        with tf.name_scope('conv_layer_1'):
+            image_shaped_input = tf.reshape(x, [-1, 32, 32, 3])
+            tf.summary.image('input', image_shaped_input, 10)
+            kernel_shaped_input = tf.reshape(kernel, [-1, 7, 7, 3])
+            tf.summary.image('kernel', kernel_shaped_input, 32)
+        
+        pool_out = tf.layers.max_pooling2d(inputs=conv1,
+                        pool_size=[2,2],
+                        strides=[2,2], 
+                        padding='VALID',
+                        name='pool1')
+        
+        # output volume after pooling and flattened.
+        dim_pool_out_flat = pool_out.get_shape()[1] * pool_out.get_shape()[2] * pool_out.get_shape()[3]
+        
+        # FC layer 1
+        pool_out_flat = tf.reshape(pool_out,[-1, int(dim_pool_out_flat)])
+        y = tf.layers.dense(inputs=pool_out_flat, units=1024, activation=tf.nn.relu)
+        y = tf.layers.dense(inputs=y, units=10, activation=None)
+        return y
 
 
     @helpers.define_scope
@@ -66,11 +90,15 @@ def main(argv):
     print('Loading data...')
     # Load data as numpy array
     data = data_utils.get_some_data(args.input_path,
-                                    dataset_name=args.dataset_name)
+                                    dataset_name=args.dataset_name,
+                                    channels_first=False,
+                                    reshape_data=False)
 
     data_utils.print_shape(data)
     X_train, y_train, X_val, y_val, X_test, y_test = data
-
+    idx_overfit=np.random.choice(len(X_train),size=100,replace=False)
+    X_train= X_train[idx_overfit]
+    y_train= y_train[idx_overfit]
     print('Initializing data...')
     num_batches = len(X_train) // args.batch_size
     num_classes = len(np.unique(y_train))
@@ -78,14 +106,14 @@ def main(argv):
 
     train_dataset_x = tf.data.Dataset.from_tensor_slices(X_train)
     train_dataset_y = tf.data.Dataset.from_tensor_slices(y_train).map(
-        lambda z: tf.one_hot(z, 10))
+        lambda z: tf.one_hot(z, num_classes))
     train_dataset = tf.data.Dataset.zip((train_dataset_x, train_dataset_y))
     train_dataset = train_dataset.shuffle(buffer_size=len(X_train))
     train_dataset = train_dataset.repeat().batch(args.batch_size)
 
     val_dataset_x = tf.data.Dataset.from_tensor_slices(X_val)
     val_dataset_y = tf.data.Dataset.from_tensor_slices(y_val).map(
-        lambda z: tf.one_hot(z, 10))
+        lambda z: tf.one_hot(z, num_classes))
     val_dataset = tf.data.Dataset.zip((val_dataset_x, val_dataset_y))
     val_dataset = val_dataset.shuffle(buffer_size=len(X_val))
     val_dataset = val_dataset.repeat().batch(args.batch_size)
