@@ -119,6 +119,7 @@ def main(argv):
     val_dataset = val_dataset.repeat().batch(args.batch_size)
 
     # TODO Here you could further preprocess your data !!
+    # Therefore have a look at ioutils.py
 
     # Create an uninitializaed iterator which can be reused with
     # different tf.data.Datasets as long as they have the same shape and type
