@@ -27,6 +27,7 @@ class Model:
         conv1 = tf.layers.conv2d(inputs=x, filters=32, kernel_size=[7,7],
                                  strides=[1,1], padding='valid',
                                  activation=tf.nn.relu,
+                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(0.01),
                                  name='conv1')
 
         kernel = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'prediction/conv1/kernel')[0]
@@ -49,8 +50,16 @@ class Model:
         
         # FC layer 1
         pool_out_flat = tf.reshape(pool_out,[-1, int(dim_pool_out_flat)])
-        y = tf.layers.dense(inputs=pool_out_flat, units=1024, activation=tf.nn.relu)
-        y = tf.layers.dense(inputs=y, units=10, activation=None)
+        y = tf.layers.dense(inputs=pool_out_flat,
+                            units=1024,
+                            kernel_regularizer=tf.contrib.layers.l2_regularizer(0.01),
+                            activation=tf.nn.relu)
+
+        # FC layer 2 - output layer
+        y = tf.layers.dense(inputs=y,
+                            units=10,
+                            kernel_regularizer=tf.contrib.layers.l2_regularizer(0.01),
+                            activation=None)
         return y
 
 
@@ -61,13 +70,17 @@ class Model:
             labels=self.label,
             logits=self.prediction)
 
-        loss = tf.reduce_mean(cross_entropy)
-        tf.summary.scalar('loss', loss)
+        data_loss = tf.reduce_mean(cross_entropy)
 
+        reg_loss = tf.losses.get_regularization_loss()
+        loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
         # Global step is incremented whenever the graph sees a new batch
         global_step=tf.train.get_or_create_global_step()
         optimizer = tf.train.AdamOptimizer(5e-4)
 
+        tf.summary.scalar('data_loss', data_loss)
+        tf.summary.scalar('reg_loss', reg_loss)
+        tf.summary.scalar('loss', loss)
         return (loss,
                 optimizer.minimize(loss, global_step=global_step))
 
