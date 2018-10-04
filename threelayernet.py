@@ -33,11 +33,12 @@ class Model:
         kernel = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'prediction/conv1/kernel')[0]
         bias   = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'prediction/conv1/bias')[0]
 
-        with tf.name_scope('conv_layer_1'):
-            image_shaped_input = tf.reshape(x, [-1, 32, 32, 3])
-            tf.summary.image('input', image_shaped_input, 10)
-            kernel_shaped_input = tf.reshape(kernel, [-1, 7, 7, 3])
-            tf.summary.image('kernel', kernel_shaped_input, 32)
+# Careful, generates huge logs and causes tensorboard to run out of memory.
+#        with tf.name_scope('conv_layer_1'):
+#            image_shaped_input = tf.reshape(x, [-1, 32, 32, 3])
+#            tf.summary.image('input', image_shaped_input, 10)
+#            kernel_shaped_input = tf.reshape(kernel, [-1, 7, 7, 3])
+#            tf.summary.image('kernel', kernel_shaped_input, 32)
         
         pool_out = tf.layers.max_pooling2d(inputs=conv1,
                         pool_size=[2,2],
@@ -109,9 +110,9 @@ def main(argv):
 
     data_utils.print_shape(data)
     X_train, y_train, X_val, y_val, X_test, y_test = data
-    idx_overfit=np.random.choice(len(X_train),size=100,replace=False)
-    X_train= X_train[idx_overfit]
-    y_train= y_train[idx_overfit]
+#    idx_overfit=np.random.choice(len(X_train),size=100,replace=False)
+#    X_train= X_train[idx_overfit]
+#    y_train= y_train[idx_overfit]
     print('Initializing data...')
     num_batches = len(X_train) // args.batch_size
     num_classes = len(np.unique(y_train))
@@ -168,16 +169,18 @@ def main(argv):
         args.logdir + '/run_' + str(run_id) + '/train', sess.graph)
     val_writer = tf.summary.FileWriter( 
         args.logdir + '/run_' + str(run_id) + '/val', sess.graph)
+
     print(' Starting training now!')
     for i in range(args.epochs):
 
         # Initialize iterator with training data
         sess.run(train_init_op)
+        
+        #Do not monitor, just train
         for _ in range(num_batches):
-            #TODO global_step not needed here(?)
-            sess.run([model.optimize, global_step])
+            sess.run(model.optimize)
 
-        # Monitor the training after every epoch
+        # Monitor the training 
         fetches = [model.optimize, model.evaluate, write_op, global_step]
         loss_vl, train_acc, summary_train, global_step_vl = sess.run(fetches)
         train_writer.add_summary(summary_train, global_step=global_step_vl)
