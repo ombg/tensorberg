@@ -30,10 +30,12 @@ class Model:
                                  kernel_regularizer=tf.contrib.layers.l2_regularizer(0.01),
                                  name='conv1')
 
-        kernel = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'prediction/conv1/kernel')[0]
-        bias   = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'prediction/conv1/bias')[0]
+        # Plot weights and images in Tensorboard.
+        #kernel = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'prediction/conv1/kernel')[0]
+        #bias   = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'prediction/conv1/bias')[0]
 
-# Careful, generates huge logs and causes tensorboard to run out of memory.
+        # Careful, generates huge log files and causes tensorboard 
+        # to run out of memory when dataset is not tiny.
 #        with tf.name_scope('conv_layer_1'):
 #            image_shaped_input = tf.reshape(x, [-1, 32, 32, 3])
 #            tf.summary.image('input', image_shaped_input, 10)
@@ -58,7 +60,7 @@ class Model:
 
         # FC layer 2 - output layer
         y = tf.layers.dense(inputs=y,
-                            units=10,
+                            units=4,
                             kernel_regularizer=tf.contrib.layers.l2_regularizer(0.01),
                             activation=None)
         return y
@@ -92,27 +94,17 @@ class Model:
             tf.argmax(self.label, 1), tf.argmax(self.prediction, 1))
         accuracy = tf.reduce_mean(tf.cast(truth_value, tf.float32))
         # Log a lot of stuff for op `accuracy` in tensorboard.
-        tf.summary.scalar('accuracy', accuracy)
+        #tf.summary.scalar('accuracy', accuracy)
         return accuracy
 
-def main(argv):
 
-    run_id = np.random.randint(1e6,size=1)[0]
-    print('run_id: {}'.format(run_id))
-    args = parser.parse_args(argv[1:])
-    print(args)
-    print('Loading data...')
-    # Load data as numpy array
-    data = data_utils.get_some_data(args.input_path,
-                                    dataset_name=args.dataset_name,
-                                    channels_first=False,
-                                    reshape_data=False)
-
-    data_utils.print_shape(data)
+def train(data, args):
     X_train, y_train, X_val, y_val, X_test, y_test = data
 #    idx_overfit=np.random.choice(len(X_train),size=100,replace=False)
 #    X_train= X_train[idx_overfit]
 #    y_train= y_train[idx_overfit]
+    run_id = np.random.randint(1e6,size=1)[0]
+    print('run_id: {}'.format(run_id))
     print('Initializing data...')
     num_batches = len(X_train) // args.batch_size
     num_classes = len(np.unique(y_train))
@@ -165,10 +157,14 @@ def main(argv):
     # Initialize all variables
     sess.run(tf.global_variables_initializer())
 
+    # File writers for TensorBoard
     train_writer = tf.summary.FileWriter( 
         args.logdir + '/run_' + str(run_id) + '/train', sess.graph)
     val_writer = tf.summary.FileWriter( 
         args.logdir + '/run_' + str(run_id) + '/val', sess.graph)
+
+    # The Saver() let's us save the weights to disk
+    saver = tf.train.Saver()
 
     print(' Starting training now!')
     for i in range(args.epochs):
@@ -199,6 +195,65 @@ def main(argv):
 
     train_writer.close()
     val_writer.close()
+    save_path = saver.save(sess, './logs/model_dir')
+    print('Model checkpoint saved to %s' % save_path)
+
+def evaluate(data, args):
+    _, _, _, _, X_test, y_test = data
+    print('Initializing test data...')
+    num_batches = len(X_test) // args.batch_size
+    num_classes = len(np.unique(y_test))
+    print('Number of batches per epoch: %d' % num_batches)
+
+    test_dataset_x = tf.data.Dataset.from_tensor_slices(X_test)
+    test_dataset_y = tf.data.Dataset.from_tensor_slices(y_test).map(
+        lambda z: tf.one_hot(z, num_classes))
+    test_dataset = tf.data.Dataset.zip((test_dataset_x, test_dataset_y))
+    test_dataset = test_dataset.shuffle(buffer_size=len(X_test))
+    test_dataset = test_dataset.batch(args.batch_size)
+
+    features, labels = test_dataset.make_one_shot_iterator().get_next()
+
+    #
+    # Define a model
+    print('Setting up the model...')
+    model = Model(image=features, label=labels)
+    global_step = tf.train.get_global_step()
+
+    # The Saver() let's us load the weights from disk. (what a name...)
+    saver = tf.train.Saver()
+    #
+    # Create the session
+    sess = tf.Session()
+
+    #Restor variables from disk - no initialization necessary.
+    saver.restore(sess, './logs/model_dir')
+    print('Model weights loaded.')
+
+    try:
+        while True:
+            acc, global_step_vl = sess.run([model.evaluate, global_step])
+            print('#{}: test_acc: {:5.2f}%'.format(global_step_vl, acc * 100.0))
+    except tf.errors.OutOfRangeError:
+        pass
+
+def main(argv):
+
+    args = parser.parse_args(argv[1:])
+    print(args)
+
+    print('Loading data...')
+    # Load data as numpy array
+    data = data_utils.get_some_data(
+        args.input_path,
+        input_path_imgdb_test=args.input_path_test,
+        dataset_name=args.dataset_name,
+        channels_first=False,
+        reshape_data=False)
+
+    data_utils.print_shape(data)
+    #train(data, args)
+    evaluate(data,args)
 
 if __name__ == '__main__':
 
