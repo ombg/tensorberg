@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 # local libs
-import helpers
+from models import helpers
 
 class ThreeLayerNet:
 
@@ -52,7 +52,7 @@ class ThreeLayerNet:
 
         # FC layer 2 - output layer
         y = tf.layers.dense(inputs=y,
-                            units=4,
+                            units=10,
                             kernel_regularizer=tf.contrib.layers.l2_regularizer(0.01),
                             activation=None)
         return y

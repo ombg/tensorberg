@@ -1,5 +1,5 @@
-import tensorflow as tf
 import functools
+import tensorflow as tf
 
 def doublewrap(function):
     """
