@@ -107,6 +107,16 @@ def train(data, args):
     print('Model checkpoint saved to %s' % save_path)
 
 def evaluate(data, args):
+    """Loads a trained model and evaluates it on a test set.
+    Given a tupel of numpy arrays this function performs the following:
+
+    TODO
+
+    Args:
+      data: A `tuple` of numpy arrays.
+      args: A `list` of arguments parsed from command line.
+    """
+
     _, _, _, _, X_test, y_test = data
     print('Initializing test data...')
     num_batches = len(X_test) // args.batch_size
@@ -116,7 +126,7 @@ def evaluate(data, args):
     test_dataset_x = tf.data.Dataset.from_tensor_slices(X_test)
     test_dataset_y = tf.data.Dataset.from_tensor_slices(y_test).map(
         lambda z: tf.one_hot(z, num_classes))
-    test_dataset = tf.data.Dataset.zip((test_dataset_x, test_dataset_y))
+    test_dataset = tf.data.Dataset.zip((test_dataset_x, test_dataset_y)) 
     test_dataset = test_dataset.shuffle(buffer_size=len(X_test))
     test_dataset = test_dataset.batch(args.batch_size)
 
@@ -160,8 +170,9 @@ def main(argv):
         reshape_data=False)
 
     data_utils.print_shape(data)
-    #train(data, args)
-    evaluate(data,args)
+    # TODO when to call which function
+    train(data, args)
+    #evaluate(data,args)
 
 if __name__ == '__main__':
 
