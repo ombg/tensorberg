@@ -1,35 +1,15 @@
-########################################################################################
-# Davi Frossard, 2016                                                                  #
-# VGG16 implementation in TensorFlow                                                   #
-# Details:                                                                             #
-# http://www.cs.toronto.edu/~frossard/post/vgg16/                                      #
-#                                                                                      #
-# Model from https://gist.github.com/ksimonyan/211839e770f7b538e2d8#file-readme-md     #
-# Weights from Caffe converted using https://github.com/ethereon/caffe-tensorflow      #
-########################################################################################
-# If you use the TensorFLow layers-API I am not sure if you can access weights and
-# biases that simple as it is the case in this example.
-
+from base.base_model import BaseModel
 import tensorflow as tf
-import numpy as np
-from scipy.misc import imread, imresize
-from imagenet_classes import class_names
-
-from models import helpers
-
-class vgg16:
-    def __init__(self, imgs, labels, weights=None, sess=None):
-        self.imgs = imgs
-        self.labels = labels
-        self.conv_layers
-        self.fc_layers
-        self.probs = tf.nn.softmax(self.fc3l)
-        if weights is not None and sess is not None:
-            self.load_weights(weights, sess)
 
 
-    @helpers.define_scope(initializer=tf.glorot_uniform_initializer())
-    def conv_layers(self):
+class Vgg16(BaseModel):
+    def __init__(self, config):
+        super(Vgg16, self).__init__(config)
+
+        self.build_model()
+        self.init_saver()
+
+    def build_model(self):
         # Parameter variables must be made accessible because later 
         # the weights are loaded from an npz file.
         self.parameters = []
@@ -221,7 +201,6 @@ class vgg16:
                                padding='SAME',
                                name='pool4')
 
-    def fc_layers(self):
         # fc1
         with tf.name_scope('fc1') as scope:
             shape = int(np.prod(self.pool5.get_shape()[1:]))
@@ -256,24 +235,23 @@ class vgg16:
             self.fc3l = tf.nn.bias_add(tf.matmul(self.fc2, fc3w), fc3b)
             self.parameters += [fc3w, fc3b]
 
-    def load_weights(self, weight_file, sess):
-        weights = np.load(weight_file)
-        # keys of Python dictionary are not sorted by default
-        keys = sorted(weights.keys())
-        for i, k in enumerate(keys):
-            print(i, k, np.shape(weights[k]))
-            # Instead of hours of training, load the pretrained weights
-            sess.run(self.parameters[i].assign(weights[k]))
+        # Compute data loss and regularization loss
+        with tf.name_scope('loss'):
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(
+                labels=self.labels,
+                logits=self.fc3l)
+            self.data_loss = tf.reduce_mean(cross_entropy)
+            self.reg_loss = tf.losses.get_regularization_loss()
+            self.loss = tf.add(self.data_loss, self.reg_loss, name='data_and_reg_loss')
 
-if __name__ == '__main__':
-    sess = tf.Session()
-    imgs = tf.placeholder(tf.float32, [None, 224, 224, 3])
-    vgg = vgg16(imgs, 'no_sync/vgg16_weights.npz', sess)
+            optimizer = tf.train.AdamOptimizer(5e-4)
+            self.train_step = optimizer.minimize(loss, global_step=self.global_step_tensor)
+            correct_prediction = tf.equal(tf.argmax(self.fc3l, 1), tf.argmax(self.labels, 1))
+            self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+#            tf.summary.scalar('data_loss', data_loss)
+#            tf.summary.scalar('reg_loss', reg_loss)
+#            tf.summary.scalar('loss', loss)
 
-    img1 = imread('/home/oliver/data/misc/burrito.jpg', mode='RGB')
-    img1 = imresize(img1, (224, 224))
-
-    prob = sess.run(vgg.probs, feed_dict={vgg.imgs: [img1]})[0]
-    preds = (np.argsort(prob)[::-1])[0:5]
-    for p in preds:
-        print(class_names[p], prob[p])
+    def init_saver(self):
+        # here you initialize the tensorflow saver that will be used in saving the checkpoints.
+        self.saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
