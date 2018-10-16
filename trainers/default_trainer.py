@@ -5,7 +5,7 @@ import numpy as np
 #from utils.logger import DefinedSummarizer
 
 class Trainer:
-    def __init__(self, sess, model, data, config):
+    def __init__(self, sess, model, data_loader, config):
         """
         Constructing the trainer
         :param sess: TF.Session() instance
@@ -19,8 +19,8 @@ class Trainer:
         #self.logger = logger
         self.config = config
         self.sess = sess
-        if data is not None:
-            self.data = data
+        if data_loader is not None:
+            self.data_loader = data_loader
 
         # Initialize all variables of the graph
         self.init = tf.global_variables_initializer()
@@ -45,8 +45,8 @@ class Trainer:
         :param epoch: take the number of epoch if you are interested
         :return:
         """
-        self.data.initialize(self.sess)
-        loop = tqdm(range(self.config.num_iter_per_epoch))
+        self.data_loader.initialize(self.sess)
+        loop = tqdm(range(self.config.num_iter_per_epoch), ascii=True)
         losses = []
         accs = []
         for _ in loop:
@@ -56,7 +56,8 @@ class Trainer:
         loss = np.mean(losses)
         acc = np.mean(accs)
         #TODO DEBUG
-        print(loss, acc)
+        print('losses: {}' % losses)
+        print('loss: {} acc: {}' % loss, acc)
 
         cur_it = self.model.global_step_tensor.eval(self.sess)
         summaries_dict = {
@@ -73,5 +74,6 @@ class Trainer:
         - run the tensorflow session
         :return: any metrics you need to summarize
         """
-        _, loss, acc = self.sess.run([self.model.train_step, self.model.loss, self.model.accuracy])
+        fetches = [self.model.train_step, self.model.loss, self.model.accuracy]
+        _, loss, acc = self.sess.run(fetches)
         return loss, acc

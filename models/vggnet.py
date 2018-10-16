@@ -293,5 +293,6 @@ class Vgg16(BaseModel):
 #            tf.summary.scalar('loss', loss)
 
     def init_saver(self):
-        # here you initialize the tensorflow saver that will be used in saving the checkpoints.
+        # Saves the checkpoints of your model. It saves the last <max_to_keep>
+        # checkpoints
         self.saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)

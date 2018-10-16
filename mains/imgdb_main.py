@@ -3,10 +3,10 @@ import sys
 sys.path.extend(['..'])
 
 import tensorflow as tf
-from data_loader.cifar_imgdb import ImgdbLoader
 from models.vggnet import Vgg16
 from trainers.default_trainer import Trainer
 
+from utils.datahandler import ImgdbLoader
 from utils.config import process_config
 from utils.dirs import create_dirs
 #from utils.logger import DefinedSummarizer
@@ -30,10 +30,10 @@ def main():
     # create tensorflow session
     sess = tf.Session()
 
-    # create your data generator
+    # Loads data into a tf.dataset
     data_loader = ImgdbLoader(config)
 
-    # create instance of the model you want
+    # create instance of the model 
     model = Vgg16(data_loader, config)
 
     # create tensorboard logger
@@ -42,7 +42,7 @@ def main():
 #                               scalar_tags=['train/loss_per_epoch', 'train/acc_per_epoch',
 #                                            'test/loss_per_epoch','test/acc_per_epoch'])
 
-    # create trainer and path all previous components to it
+    # Trainer loops over the data using the model
     #trainer = Trainer(sess, model, data_loader, config, logger)
     trainer = Trainer(sess, model, data_loader, config)
 

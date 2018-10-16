@@ -11,7 +11,7 @@ This class will contain different loaders for cifar 100 dataset
 
 Supports IMGDB4 and CIFAR dataset
 """
-from data_loader import data_utils
+from utils import data_utils
 from tqdm import tqdm
 
 import tensorflow as tf
