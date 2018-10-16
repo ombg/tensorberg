@@ -5,8 +5,8 @@ import numpy as np
 from utils.logger import DefinedSummarizer
 
 class Trainer(BaseTrain):
-    def __init__(self, sess, model, data, config, logger):
-        super(Trainer, self).__init__(sess, model, config,logger, data_loader=data)
+    def __init__(self, sess, model, data, config):
+        super(Trainer, self).__init__(sess, model, config, data_loader=data)
 
     def train_epoch(self):
         self.data_loader.initialize(self.sess)
@@ -27,7 +27,7 @@ class Trainer(BaseTrain):
             'loss': loss,
             'acc': acc,
         }
-        self.logger.summarize(cur_it, summaries_dict=summaries_dict)
+        #self.logger.summarize(cur_it, summaries_dict=summaries_dict)
         self.model.save(self.sess)
 
     def train_step(self):

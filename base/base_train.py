@@ -2,7 +2,7 @@ import tensorflow as tf
 
 
 class BaseTrain:
-    def __init__(self, sess, model, config, logger, data_loader=None):
+    def __init__(self, sess, model, config, data_loader=None):
         """
         Constructing the trainer
         :param sess: TF.Session() instance
@@ -13,7 +13,7 @@ class BaseTrain:
         """
         # Assign all class attributes
         self.model = model
-        self.logger = logger
+        #self.logger = logger
         self.config = config
         self.sess = sess
         if data_loader is not None:
