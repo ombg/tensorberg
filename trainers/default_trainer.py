@@ -2,10 +2,10 @@ import tensorflow as tf
 
 from tqdm import tqdm
 import numpy as np
-#from utils.logger import DefinedSummarizer
+from utils.logger import DefinedSummarizer
 
 class Trainer:
-    def __init__(self, sess, model, data_loader, config):
+    def __init__(self, sess, model, data_loader, config, logger):
         """
         Constructing the trainer
         :param sess: TF.Session() instance
@@ -16,7 +16,7 @@ class Trainer:
         """
         # Assign all class attributes
         self.model = model
-        #self.logger = logger
+        self.logger = logger
         self.config = config
         self.sess = sess
         if data_loader is not None:
@@ -58,10 +58,10 @@ class Trainer:
 
         cur_it = self.model.global_step_tensor.eval(self.sess)
         summaries_dict = {
-            'loss': epoch_loss,
-            'acc': epoch_acc,
+            'train/loss_per_epoch': epoch_loss,
+            'train/acc_per_epoch': epoch_acc
         }
-        #self.logger.summarize(cur_it, summaries_dict=summaries_dict)
+        self.logger.summarize(cur_it, summaries_dict=summaries_dict)
         self.model.save(self.sess)
 
     def train_step(self):

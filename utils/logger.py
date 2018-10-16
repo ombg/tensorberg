@@ -2,6 +2,7 @@ import os
 
 import tensorflow as tf
 
+# TODO Create simple summary wrapper class
 
 class DefinedSummarizer:
     def __init__(self, sess, summary_dir, config, scalar_tags=None, images_tags=None):
