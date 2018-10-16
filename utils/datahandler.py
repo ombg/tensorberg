@@ -29,6 +29,7 @@ class ImgdbLoader:
             self.config.input_path,
             input_path_imgdb_test=self.config.input_path_test,
             dataset_name=self.config.dataset_name,
+            normalize_data=True,
             subtract_mean=True,
             channels_first=False,
             flatten_imgs=True)

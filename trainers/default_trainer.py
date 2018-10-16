@@ -53,16 +53,13 @@ class Trainer:
             loss, acc = self.train_step()
             losses.append(loss)
             accs.append(acc)
-        loss = np.mean(losses)
-        acc = np.mean(accs)
-        #TODO DEBUG
-        print('losses: {}' % losses)
-        print('loss: {} acc: {}' % loss, acc)
+        epoch_loss = np.mean(losses)
+        epoch_acc = np.mean(accs)
 
         cur_it = self.model.global_step_tensor.eval(self.sess)
         summaries_dict = {
-            'loss': loss,
-            'acc': acc,
+            'loss': epoch_loss,
+            'acc': epoch_acc,
         }
         #self.logger.summarize(cur_it, summaries_dict=summaries_dict)
         self.model.save(self.sess)
@@ -74,6 +71,8 @@ class Trainer:
         - run the tensorflow session
         :return: any metrics you need to summarize
         """
-        fetches = [self.model.train_step, self.model.loss, self.model.accuracy]
+        fetches = [self.model.train_step,
+                   self.model.loss,
+                   self.model.accuracy]
         _, loss, acc = self.sess.run(fetches)
         return loss, acc

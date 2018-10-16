@@ -274,9 +274,9 @@ class Vgg16(BaseModel):
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(
                 labels=self.labels,
                 logits=self.fc3l)
-            self.data_loss = tf.reduce_mean(cross_entropy)
-            self.reg_loss = tf.losses.get_regularization_loss()
-            self.loss = tf.add(self.data_loss, self.reg_loss, name='data_and_reg_loss')
+            data_loss = tf.reduce_mean(cross_entropy)
+            reg_loss = tf.losses.get_regularization_loss()
+            self.loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
             correct_prediction = tf.equal(tf.argmax(self.fc3l, 1), tf.argmax(self.labels, 1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
