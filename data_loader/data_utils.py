@@ -97,7 +97,7 @@ def get_some_data(input_path,
                   dataset_name=None,
                   num_training=49000, num_validation=1000, num_test=10000,
                   subtract_mean=True,
-                  normalize_data=True,
+                  normalize_data=False,
                   channels_first=True,
                   reshape_data=True,
                   one_hot=False):
