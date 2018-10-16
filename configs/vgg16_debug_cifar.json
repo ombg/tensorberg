@@ -1,0 +1,13 @@
+{
+    "input_path":"/tmp/cifar-10-batches-py/",
+    "input_path_test":"/tmp/flower_photos_test/",
+    "dataset_name": "cifar",
+    "exp_name": "vgg16_debug_cifar",
+    "summary_dir": "../no_sync/logs/",
+    "num_epochs": 2,
+    "num_iter_per_epoch": 10,
+    "learning_rate": 0.001,
+    "batch_size": 16,
+    "state_size": [784],
+    "max_to_keep":5
+}
