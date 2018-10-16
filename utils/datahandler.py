@@ -36,6 +36,7 @@ class ImgdbLoader:
 
         data_utils.print_shape(data)
         X_train, y_train, X_val, y_val, X_test, y_test = data
+        self.num_batches = len(X_train) // self.config.batch_size
         num_classes = len(np.unique(y_train))
         train_dataset_x = tf.data.Dataset.from_tensor_slices(X_train)
         train_dataset_y = tf.data.Dataset.from_tensor_slices(y_train).map(

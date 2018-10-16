@@ -48,12 +48,12 @@ class Vgg16(BaseModel):
         Network Architecture
         """
         ## zero-mean input
-        #with tf.variable_scope('preprocess') as scope:
+        #with tf.name_scope('preprocess') as scope:
         #    mean = tf.constant([123.68, 116.779, 103.939], dtype=tf.float32, shape=[1, 1, 1, 3], name='img_mean')
         #    images_avrgd = self.images - mean
 
         ## conv1_1
-        #with tf.variable_scope('conv1_1') as scope:
+        #with tf.name_scope('conv1_1') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 3, 64], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    # conv is tf.Tensor. It is the output volume of shape [batchsize, 224,224,64]
@@ -68,7 +68,7 @@ class Vgg16(BaseModel):
         #    self.parameters += [kernel, biases]
 
         ## conv1_2
-        #with tf.variable_scope('conv1_2') as scope:
+        #with tf.name_scope('conv1_2') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 64, 64], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.conv1_1, kernel, [1, 1, 1, 1], padding='SAME')
@@ -86,7 +86,7 @@ class Vgg16(BaseModel):
         #                       name='pool1')
 
         ## conv2_1
-        #with tf.variable_scope('conv2_1') as scope:
+        #with tf.name_scope('conv2_1') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 64, 128], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.pool1, kernel, [1, 1, 1, 1], padding='SAME')
@@ -97,7 +97,7 @@ class Vgg16(BaseModel):
         #    self.parameters += [kernel, biases]
 
         ## conv2_2
-        #with tf.variable_scope('conv2_2') as scope:
+        #with tf.name_scope('conv2_2') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 128, 128], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.conv2_1, kernel, [1, 1, 1, 1], padding='SAME')
@@ -115,7 +115,7 @@ class Vgg16(BaseModel):
         #                       name='pool2')
 
         ## conv3_1
-        #with tf.variable_scope('conv3_1') as scope:
+        #with tf.name_scope('conv3_1') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 128, 256], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.pool2, kernel, [1, 1, 1, 1], padding='SAME')
@@ -126,7 +126,7 @@ class Vgg16(BaseModel):
         #    self.parameters += [kernel, biases]
 
         ## conv3_2
-        #with tf.variable_scope('conv3_2') as scope:
+        #with tf.name_scope('conv3_2') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 256, 256], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.conv3_1, kernel, [1, 1, 1, 1], padding='SAME')
@@ -137,7 +137,7 @@ class Vgg16(BaseModel):
         #    self.parameters += [kernel, biases]
 
         ## conv3_3
-        #with tf.variable_scope('conv3_3') as scope:
+        #with tf.name_scope('conv3_3') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 256, 256], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.conv3_2, kernel, [1, 1, 1, 1], padding='SAME')
@@ -155,7 +155,7 @@ class Vgg16(BaseModel):
         #                       name='pool3')
 
         ## conv4_1
-        #with tf.variable_scope('conv4_1') as scope:
+        #with tf.name_scope('conv4_1') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 256, 512], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.pool3, kernel, [1, 1, 1, 1], padding='SAME')
@@ -166,7 +166,7 @@ class Vgg16(BaseModel):
         #    self.parameters += [kernel, biases]
 
         ## conv4_2
-        #with tf.variable_scope('conv4_2') as scope:
+        #with tf.name_scope('conv4_2') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 512, 512], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.conv4_1, kernel, [1, 1, 1, 1], padding='SAME')
@@ -177,7 +177,7 @@ class Vgg16(BaseModel):
         #    self.parameters += [kernel, biases]
 
         ## conv4_3
-        #with tf.variable_scope('conv4_3') as scope:
+        #with tf.name_scope('conv4_3') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 512, 512], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.conv4_2, kernel, [1, 1, 1, 1], padding='SAME')
@@ -195,7 +195,7 @@ class Vgg16(BaseModel):
         #                       name='pool4')
 
         ## conv5_1
-        #with tf.variable_scope('conv5_1') as scope:
+        #with tf.name_scope('conv5_1') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 512, 512], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.pool4, kernel, [1, 1, 1, 1], padding='SAME')
@@ -206,7 +206,7 @@ class Vgg16(BaseModel):
         #    self.parameters += [kernel, biases]
 
         ## conv5_2
-        #with tf.variable_scope('conv5_2') as scope:
+        #with tf.name_scope('conv5_2') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 512, 512], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.conv5_1, kernel, [1, 1, 1, 1], padding='SAME')
@@ -217,7 +217,7 @@ class Vgg16(BaseModel):
         #    self.parameters += [kernel, biases]
 
         ## conv5_3
-        #with tf.variable_scope('conv5_3') as scope:
+        #with tf.name_scope('conv5_3') as scope:
         #    kernel = tf.Variable(tf.truncated_normal([3, 3, 512, 512], dtype=tf.float32,
         #                                             stddev=1e-1), name='weights')
         #    conv = tf.nn.conv2d(self.conv5_2, kernel, [1, 1, 1, 1], padding='SAME')
@@ -235,7 +235,7 @@ class Vgg16(BaseModel):
         #                       name='pool4')
 
         # fc1
-        with tf.variable_scope('fc1') as scope:
+        with tf.name_scope('fc1') as scope:
             #shape = int(np.prod(self.pool5.get_shape()[1:]))
             shape = int(self.images.get_shape()[1])
             fc1w = tf.Variable(tf.truncated_normal([shape, 4096],
@@ -249,7 +249,7 @@ class Vgg16(BaseModel):
             self.parameters += [fc1w, fc1b]
 
         # fc2
-        with tf.variable_scope('fc2') as scope:
+        with tf.name_scope('fc2') as scope:
             fc2w = tf.Variable(tf.truncated_normal([4096, 1024],
                                                          dtype=tf.float32,
                                                          stddev=1e-1), name='weights')
@@ -260,7 +260,7 @@ class Vgg16(BaseModel):
             self.parameters += [fc2w, fc2b]
 
         # fc3
-        with tf.variable_scope('fc3') as scope:
+        with tf.name_scope('fc3') as scope:
             fc3w = tf.Variable(tf.truncated_normal([1024, 10],
                                                          dtype=tf.float32,
                                                          stddev=1e-1), name='weights')
@@ -270,7 +270,7 @@ class Vgg16(BaseModel):
             self.parameters += [fc3w, fc3b]
 
         # Compute data loss and regularization loss
-        with tf.variable_scope('loss'):
+        with tf.name_scope('loss'):
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(
                 labels=self.labels,
                 logits=self.fc3l)
@@ -280,7 +280,7 @@ class Vgg16(BaseModel):
             correct_prediction = tf.equal(tf.argmax(self.fc3l, 1), tf.argmax(self.labels, 1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-        with tf.variable_scope('train_step'):
+        with tf.name_scope('train_step'):
             self.optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             #TODO Necessary?

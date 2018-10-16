@@ -46,7 +46,7 @@ class Trainer:
         :return:
         """
         self.data_loader.initialize(self.sess)
-        loop = tqdm(range(self.config.num_iter_per_epoch), ascii=True)
+        loop = tqdm(range(self.data_loader.num_batches), ascii=True)
         losses = []
         accs = []
         for _ in loop:
