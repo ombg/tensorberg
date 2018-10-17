@@ -12,7 +12,6 @@ This class will contain different loaders for cifar 100 dataset
 Supports IMGDB4 and CIFAR dataset
 """
 from utils import data_utils
-from tqdm import tqdm
 
 import tensorflow as tf
 import numpy as np
@@ -36,10 +35,10 @@ class ImgdbLoader:
 
         data_utils.print_shape(data)
         X_train, y_train, X_val, y_val, X_test, y_test = data
-        #DEBUG - small subset to provoke overfitting
-        idx_overfit=np.random.choice(len(X_train),size=1000,replace=False)
-        X_train= X_train[idx_overfit]
-        y_train= y_train[idx_overfit]
+#        #DEBUG - small subset to provoke overfitting
+#        idx_overfit=np.random.choice(len(X_train),size=256,replace=False)
+#        X_train= X_train[idx_overfit]
+#        y_train= y_train[idx_overfit]
         self.num_batches = len(X_train) // self.config.batch_size
 
         self.train_dataset = self._from_numpy(X_train, y_train)
