@@ -26,7 +26,11 @@ class Trainer:
         self.sess.run(self.init)
 
     def train(self):
-        global_step = tf.get_or_create_global_step()
+        run_id = np.random.randint(1e6,size=1)[0]
+        print('run_id: {}'.format(run_id))
+        print('Initializing data...')
+        
+        global_step = tf.train.get_or_create_global_step()
     
         saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
         # File writers for TensorBoard
@@ -62,17 +66,19 @@ class Trainer:
                            self.write_op,
                            global_step]
             val_loss, val_acc, summary_val, global_step_vl = self.sess.run(fetches_val)
-            print(('#{}: train_loss: {:5.2f} train_acc: {:5.2f}%') 
-                  ('val_loss: {:5.2f} val_acc: {:5.2f}%').format(
+            print(('#{}: train_loss: {:5.2f} train_acc: {:5.2f}%' 
+                   ' val_loss: {:5.2f} val_acc: {:5.2f}%').format(
                 global_step_vl,
                 loss_vl, train_acc*100.0,
                 val_loss, val_acc*100.0))
             val_writer.add_summary(summary_val, global_step=global_step_vl)
             val_writer.flush()
-            self.model.save(self.sess)
+
+        save_path = saver.save(self.sess, ('../no_sync/experiments/' +
+                                          self.config.exp_name +
+                                          '/checkpoints/run_' + str(run_id)))
+        print('Model checkpoint saved to %s' % save_path)
     
         train_writer.close()
         val_writer.close()
-        save_path = saver.save(self.sess, './no_sync/model_checkpoints/' + str(run_id))
-        print('Model checkpoint saved to %s' % save_path)
 

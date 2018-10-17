@@ -5,9 +5,9 @@ import numpy as np
 
 class Vgg16:
     def __init__(self, data_loader, config):
-        super(Vgg16, self).__init__(config)
 
         self.data_loader = data_loader
+        self.config = config
 
         self.images = None
         self.labels = None
@@ -20,7 +20,6 @@ class Vgg16:
         self.parameters = []
 
         self.build_model()
-        self.init_saver()
 
     def build_model(self):
 
@@ -270,11 +269,10 @@ class Vgg16:
             self.loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
             correct_prediction = tf.equal(tf.argmax(self.fc3l, 1), tf.argmax(self.labels, 1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            tf.summary.scalar('total_loss', self.loss)
+            tf.summary.scalar('accuracy', self.accuracy)
 
         with tf.name_scope('train_step'):
             global_step=tf.train.get_or_create_global_step()
             self.optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
-            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-            #TODO Necessary?
-            with tf.control_dependencies(update_ops):
-                self.train_step = self.optimizer.minimize(self.loss, global_step=global_step)
+            self.train_step = self.optimizer.minimize(self.loss, global_step=global_step)

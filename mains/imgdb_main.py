@@ -36,7 +36,7 @@ def main():
     model = Vgg16(data_loader, config)
 
     # Trainer loops over the data using the model
-    trainer = Trainer(sess, model, data_loader, config, logger)
+    trainer = Trainer(sess, model, data_loader, config)
 
     # here you train your model
     trainer.train()
