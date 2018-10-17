@@ -1,10 +1,9 @@
-from base.base_model import BaseModel
 import tensorflow as tf
 
 #TODO Only because of `shape = int(np.prod(self.pool5.get_shape()[1:]))`
 import numpy as np
 
-class Vgg16(BaseModel):
+class Vgg16:
     def __init__(self, data_loader, config):
         super(Vgg16, self).__init__(config)
 
@@ -25,14 +24,6 @@ class Vgg16(BaseModel):
 
     def build_model(self):
 
-        """
-        Helper Variables
-        """
-        self.global_step_tensor = tf.Variable(0, trainable=False, name='global_step')
-        self.global_step_inc = self.global_step_tensor.assign(self.global_step_tensor + 1)
-        self.global_epoch_tensor = tf.Variable(0, trainable=False, name='global_epoch')
-        self.global_epoch_inc = self.global_epoch_tensor.assign(self.global_epoch_tensor + 1)
-        
         """
         Inputs to the network
         """
@@ -281,14 +272,9 @@ class Vgg16(BaseModel):
             self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         with tf.name_scope('train_step'):
+            global_step=tf.train.get_or_create_global_step()
             self.optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             #TODO Necessary?
             with tf.control_dependencies(update_ops):
-                self.train_step = self.optimizer.minimize(self.loss, global_step=self.global_step_tensor)
-            
-
-    def init_saver(self):
-        # Saves the checkpoints of your model. It saves the last <max_to_keep>
-        # checkpoints
-        self.saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
+                self.train_step = self.optimizer.minimize(self.loss, global_step=global_step)
