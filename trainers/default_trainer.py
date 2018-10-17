@@ -58,7 +58,6 @@ class Trainer:
             _,loss_vl, train_acc, summary_train, global_step_vl = self.sess.run(fetches)
             train_writer.add_summary(summary_train, global_step=global_step_vl)
             train_writer.flush()
-    
             #Check how it goes with validation set
             self.data_loader.initialize_val(self.sess)
             fetches_val = [self.model.loss,
