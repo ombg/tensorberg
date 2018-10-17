@@ -36,25 +36,39 @@ class ImgdbLoader:
 
         data_utils.print_shape(data)
         X_train, y_train, X_val, y_val, X_test, y_test = data
+        #DEBUG - small subset to provoke overfitting
+        idx_overfit=np.random.choice(len(X_train),size=1000,replace=False)
+        X_train= X_train[idx_overfit]
+        y_train= y_train[idx_overfit]
         self.num_batches = len(X_train) // self.config.batch_size
-        num_classes = len(np.unique(y_train))
-        train_dataset_x = tf.data.Dataset.from_tensor_slices(X_train)
-        train_dataset_y = tf.data.Dataset.from_tensor_slices(y_train).map(
-            lambda z: tf.one_hot(z, num_classes))
-        self.train_dataset = tf.data.Dataset.zip((train_dataset_x, train_dataset_y))
-        self.train_dataset = self.train_dataset.shuffle(buffer_size=len(X_train))
-        self.train_dataset = self.train_dataset.repeat().batch(self.config.batch_size)
 
-        # Create an uninitializaed iterator which can be reused with
-        # different tf.data.Datasets as long as they have the same shape and type
+        self.train_dataset = self._from_numpy(X_train, y_train)
+        self.val_dataset = self._from_numpy(X_val, y_val)
+        self.test_dataset = self._from_numpy(X_test, y_test)
+
         self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
                                                    self.train_dataset.output_shapes)
 
-        # Until now the iterator is not bound to a dataset and is uninitialized.
-        # Therefore, we now create init_ops. Later, a session runs these init_ops.
         self.training_init_op = self.iterator.make_initializer(self.train_dataset)
+        self.val_init_op = self.iterator.make_initializer(self.val_dataset)
+        self.test_init_op = self.iterator.make_initializer(self.test_dataset)
 
-    def initialize(self, sess):
+    def _from_numpy(self, X, y):
+        num_classes = len(np.unique(y))
+        dset_x = tf.data.Dataset.from_tensor_slices(X)
+        dset_y = tf.data.Dataset.from_tensor_slices(y).map(
+            lambda z: tf.one_hot(z, num_classes))
+        dset = tf.data.Dataset.zip((dset_x, dset_y))
+        dset = dset.shuffle(buffer_size=len(X))
+        dset = dset.repeat().batch(self.config.batch_size)
+        return dset
+
+
+    def initialize_train(self, sess):
         sess.run(self.training_init_op)
+    def initialize_val(self, sess):
+        sess.run(self.val_init_op)
+    def initialize_test(self, sess):
+        sess.run(self.test_init_op)
     def get_input(self):
         return self.iterator.get_next()

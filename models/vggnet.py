@@ -288,10 +288,6 @@ class Vgg16(BaseModel):
                 self.train_step = self.optimizer.minimize(self.loss, global_step=self.global_step_tensor)
             
 
-#            tf.summary.scalar('data_loss', data_loss)
-#            tf.summary.scalar('reg_loss', reg_loss)
-#            tf.summary.scalar('loss', loss)
-
     def init_saver(self):
         # Saves the checkpoints of your model. It saves the last <max_to_keep>
         # checkpoints

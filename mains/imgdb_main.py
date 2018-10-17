@@ -9,7 +9,7 @@ from trainers.default_trainer import Trainer
 from utils.datahandler import ImgdbLoader
 from utils.config import process_config
 from utils.dirs import create_dirs
-from utils.logger import DefinedSummarizer
+from utils.logger import Logger
 from utils.utils import get_args
 
 
@@ -37,10 +37,11 @@ def main():
     model = Vgg16(data_loader, config)
 
     # create tensorboard logger
-    logger = DefinedSummarizer(sess, summary_dir=config.summary_dir, 
-                               config=config,
-                               scalar_tags=['train/loss_per_epoch', 'train/acc_per_epoch'])
-                                            #'test/loss_per_epoch','test/acc_per_epoch'])
+    #logger = DefinedSummarizer(sess, summary_dir=config.summary_dir, 
+    #                           config=config,
+    #                           scalar_tags=['train/loss_per_epoch', 'train/acc_per_epoch',
+    #                                        'val/loss_per_epoch','val/acc_per_epoch'])
+    logger = Logger(sess, config)
 
     # Trainer loops over the data using the model
     trainer = Trainer(sess, model, data_loader, config, logger)

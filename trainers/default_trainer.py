@@ -2,7 +2,7 @@ import tensorflow as tf
 
 from tqdm import tqdm
 import numpy as np
-from utils.logger import DefinedSummarizer
+from utils.logger import Logger
 
 class Trainer:
     def __init__(self, sess, model, data_loader, config, logger):
@@ -45,7 +45,8 @@ class Trainer:
         :param epoch: take the number of epoch if you are interested
         :return:
         """
-        self.data_loader.initialize(self.sess)
+        # Load the training dataset
+        self.data_loader.initialize_train(self.sess)
         loop = tqdm(range(self.data_loader.num_batches), ascii=True)
         losses = []
         accs = []
@@ -53,15 +54,24 @@ class Trainer:
             loss, acc = self.train_step()
             losses.append(loss)
             accs.append(acc)
-        epoch_loss = np.mean(losses)
-        epoch_acc = np.mean(accs)
+        train_epoch_loss = np.mean(losses)
+        train_epoch_acc = np.mean(accs)
 
         cur_it = self.model.global_step_tensor.eval(self.sess)
-        summaries_dict = {
-            'train/loss_per_epoch': epoch_loss,
-            'train/acc_per_epoch': epoch_acc
-        }
-        self.logger.summarize(cur_it, summaries_dict=summaries_dict)
+        self.logger.summarize(cur_it,
+                              summarizer="train",
+                              scope="subset_1000",
+                              summaries_dict={'train/loss_per_epoch': train_epoch_loss,
+                                              'train/acc_per_epoch': train_epoch_acc})
+        # Check the validation accuracy once per epoch
+        self.data_loader.initialize_val(self.sess)
+        val_epoch_loss, val_epoch_acc = self.validation_step()
+
+        self.logger.summarize(cur_it,
+                              summarizer="test",
+                              scope="subset_1000",
+                              summaries_dict={'val/loss_per_epoch': val_epoch_loss,
+                                              'val/acc_per_epoch': val_epoch_acc})
         self.model.save(self.sess)
 
     def train_step(self):
@@ -75,4 +85,13 @@ class Trainer:
                    self.model.loss,
                    self.model.accuracy]
         _, loss, acc = self.sess.run(fetches)
+        return loss, acc
+
+    def validation_step(self):
+        """
+        Runs all graph ops which need validation
+        """
+        fetches = [self.model.loss,
+                   self.model.accuracy]
+        loss, acc = self.sess.run(fetches)
         return loss, acc
