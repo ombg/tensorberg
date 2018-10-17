@@ -3,7 +3,6 @@
     "input_path_test":"/tmp/flower_photos_test/",
     "dataset_name": "cifar",
     "exp_name": "vgg16_debug_cifar",
-    "summary_dir": "../no_sync/logs/",
     "num_epochs": 15,
     "learning_rate": 0.001,
     "batch_size": 64,

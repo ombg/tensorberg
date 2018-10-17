@@ -73,9 +73,7 @@ class Trainer:
             val_writer.add_summary(summary_val, global_step=global_step_vl)
             val_writer.flush()
 
-        save_path = saver.save(self.sess, ('../no_sync/experiments/' +
-                                          self.config.exp_name +
-                                          '/checkpoints/run_' + str(run_id)))
+        save_path = saver.save(sess, self.config.checkpoint_dir + '/run_' + str(run_id))
         print('Model checkpoint saved to %s' % save_path)
     
         train_writer.close()
