@@ -29,10 +29,10 @@ class ImgdbLoader:
             self.config.input_path,
             input_path_imgdb_test=self.config.input_path_test,
             dataset_name=self.config.dataset_name,
-            normalize_data=True,
-            subtract_mean=True,
+            normalize_data=False,
+            subtract_mean=False,
             channels_first=False,
-            flatten_imgs=True)
+            flatten_imgs=False)
 
         data_utils.print_shape(data)
         X_train, y_train, X_val, y_val, X_test, y_test = data
