@@ -32,19 +32,17 @@ def main():
 
     # Loads data into a tf.dataset
     #data_loader = ImgdbLoader(config)
-    #data_loader = ImageDirLoader(config)
+    data_loader = ImageDirLoader(config)
 
     # create instance of the model 
-    model = Vgg16(config)
+    model = Vgg16(config, data_loader=data_loader)
 
     # Trainer loops over the data using the model
-    trainer = Trainer(sess, model, config)
+    trainer = Trainer(sess, model, config, data_loader=data_loader)
 
     model.load_weights_from_numpy(config.weights_file, sess)
 
-    #trainer.train()
-
-    trainer.predict('/tmp/burrito.jpg')
+    trainer.train()
     
 if __name__ == '__main__':
     main()

@@ -122,6 +122,39 @@ class ImageDirLoader:
     def get_input(self):
         return self.iterator.get_next()
 
+def dset_from_ordered_dict(file_lists,
+                           subset,
+                           batch_size=64,
+                           do_shuffle=True,
+                           repetitions=-1):
+
+    def _parse_jpeg(filename):
+        image_string = tf.read_file(filename)
+        image_decoded = tf.image.decode_jpeg(image_string, channels=3)
+        image_resized = tf.image.resize_images(image_decoded, [224, 224])
+        return image_resized
+
+    num_classes = len(file_lists.keys())
+    samples_list = []
+    labels_list = []
+    label_number = 0
+
+    for label, value in file_lists.items():
+        samples_list += file_lists[label][subset]
+        labels_list += [label_number] * len(file_lists[label][subset])
+        label_number += 1
+
+    dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(samples_list))
+    dset_x = dset_x.map(_parse_jpeg)
+    dset_y = tf.data.Dataset.from_tensor_slices(tf.constant(labels_list))
+    dset_y = dset_y.map(lambda z: tf.one_hot(z, num_classes))
+
+    dset = tf.data.Dataset.zip((dset_x, dset_y))
+    if do_shuffle:
+        dset = dset.shuffle(buffer_size=len(samples_list))
+
+    return dset.repeat(repetitions).batch(batch_size)
+
 def create_image_lists(image_dir, testing_percentage, validation_percentage):
     """Builds a list of training images from the file system.
   
@@ -230,34 +263,3 @@ def get_IMGDB_dataset(img_list_filename,
     dataset = tf.data.Dataset.from_tensor_slices((imgs, labels))
     dataset = dataset.map(_parse_function) 
     return dataset
-
-def dset_from_ordered_dict(file_lists, subset_flag, batch_size=64):
-
-    def _parse_jpeg(filename):
-        image_string = tf.read_file(filename)
-        image_decoded = tf.image.decode_jpeg(image_string, channels=3)
-        image_resized = tf.image.resize_images(image_decoded, [224, 224])
-        return image_resized
-
-    num_classes = len(file_lists.keys())
-    samples_list = []
-    labels_list = []
-    label_number = 0
-
-    for label, value in file_lists.items():
-        samples_list += file_lists[label][subset_flag]
-        labels_list += [label_number] * len(file_lists[label][subset_flag])
-        label_number += 1
-
-    dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(samples_list))
-    dset_x = dset_x.map(_parse_jpeg)
-    dset_y = tf.data.Dataset.from_tensor_slices(tf.constant(labels_list))
-    dset_y = dset_y.map(lambda z: tf.one_hot(z, num_classes))
-
-    dset = tf.data.Dataset.zip((dset_x, dset_y))
-    dset = dset.shuffle(buffer_size=len(samples_list))
-
-    if subset_flag is 'testing':
-        return dset.batch(batch_size)
-    else:
-        return dset.repeat().batch(batch_size)
