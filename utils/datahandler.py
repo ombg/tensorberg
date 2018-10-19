@@ -12,9 +12,16 @@ This class will contain different loaders for cifar 100 dataset
 Supports IMGDB4 and CIFAR dataset
 """
 from utils import data_utils
+from ompy import fileio
 
+import collections
+import os.path
+import hashlib
+import re
 import tensorflow as tf
 import numpy as np
+
+MAX_NUM_IMAGES_PER_CLASS = 2 ** 27 - 1  # ~134M
 
 class ImgdbLoader:
     """
@@ -26,7 +33,6 @@ class ImgdbLoader:
         # Load data as numpy array
         data = data_utils.get_some_data(
             self.config.input_path,
-            input_path_imgdb_test=self.config.input_path_test,
             dataset_name=self.config.dataset_name,
             normalize_data=False,
             subtract_mean=False,
@@ -53,6 +59,8 @@ class ImgdbLoader:
         self.test_init_op = self.iterator.make_initializer(self.test_dataset)
 
     def _from_numpy(self, X, y):
+        #TODO Improve using this guide:
+        # https://www.tensorflow.org/guide/datasets#consuming_numpy_arrays
         num_classes = len(np.unique(y))
         dset_x = tf.data.Dataset.from_tensor_slices(X)
         dset_y = tf.data.Dataset.from_tensor_slices(y).map(
@@ -71,3 +79,168 @@ class ImgdbLoader:
         sess.run(self.test_init_op)
     def get_input(self):
         return self.iterator.get_next()
+
+
+class ImageDirLoader:
+    """
+    Loads images from a directory structure where the subdirectories define the labels.
+    """
+    def __init__(self,config):
+        print('Loading data...')
+        self.config = config
+
+        #X_train, y_train, X_val, y_val, X_test, y_test = data
+        image_lists = create_image_lists(config.input_path,
+                           config.testing_percentage,
+                           config.validation_percentage)
+        
+        self.train_dataset = dset_from_ordered_dict(image_lists, 'training')
+        self.val_dataset = dset_from_ordered_dict(image_lists, 'validation')
+        self.test_dataset = dset_from_ordered_dict(image_lists, 'testing')
+        #self.num_batches = len(X_train) // self.config.batch_size
+
+        self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
+                                                   self.train_dataset.output_shapes)
+
+        self.training_init_op = self.iterator.make_initializer(self.train_dataset)
+        self.val_init_op = self.iterator.make_initializer(self.val_dataset)
+        self.test_init_op = self.iterator.make_initializer(self.test_dataset)
+
+
+    def initialize_train(self, sess):
+        sess.run(self.training_init_op)
+    def initialize_val(self, sess):
+        sess.run(self.val_init_op)
+    def initialize_test(self, sess):
+        sess.run(self.test_init_op)
+    def get_input(self):
+        return self.iterator.get_next()
+
+def create_image_lists(image_dir, testing_percentage, validation_percentage):
+    """Builds a list of training images from the file system.
+  
+    Analyzes the sub folders in the image directory, splits them into stable
+    training, testing, and validation sets, and returns a data structure
+    describing the lists of images for each label and their paths.
+  
+    Args:
+      image_dir: String path to a folder containing subfolders of images.
+      testing_percentage: Integer percentage of the images to reserve for tests.
+      validation_percentage: Integer percentage of images reserved for validation.
+  
+    Returns:
+      An OrderedDict containing an entry for each label subfolder, with images
+      split into training, testing, and validation sets within each label.
+      The order of items defines the class indices.
+    """
+    if not tf.gfile.Exists(image_dir):
+        tf.logging.error("Image directory '" + image_dir + "' not found.")
+        return None
+    result = collections.OrderedDict()
+    sub_dirs = sorted(x[0] for x in tf.gfile.Walk(image_dir))
+    # The root directory comes first, so skip it.
+    is_root_dir = True
+    for sub_dir in sub_dirs:
+        if is_root_dir:
+            is_root_dir = False
+            continue
+        extensions = sorted(set(os.path.normcase(ext)  # Smash case on Windows.
+                              for ext in ['JPEG', 'JPG', 'jpeg', 'jpg']))
+        file_list = []
+        dir_name = os.path.basename(sub_dir)
+        if dir_name == image_dir:
+            continue
+        tf.logging.info("Looking for images in '" + dir_name + "'")
+        for extension in extensions:
+            file_glob = os.path.join(image_dir, dir_name, '*.' + extension)
+            file_list.extend(tf.gfile.Glob(file_glob))
+        if not file_list:
+            tf.logging.warning('No files found')
+            continue
+        if len(file_list) < 20:
+            tf.logging.warning(
+                'WARNING: Folder has less than 20 images, which may cause issues.')
+        elif len(file_list) > MAX_NUM_IMAGES_PER_CLASS:
+            tf.logging.warning(
+                'WARNING: Folder {} has more than {} images. Some images will '
+                'never be selected.'.format(dir_name, MAX_NUM_IMAGES_PER_CLASS))
+        label_name = re.sub(r'[^a-z0-9]+', ' ', dir_name.lower())
+        training_images = []
+        testing_images = []
+        validation_images = []
+        for file_name in file_list:
+            base_name = os.path.basename(file_name)
+            # We want to ignore anything after '_nohash_' in the file name when
+            # deciding which set to put an image in, the data set creator has a way of
+            # grouping photos that are close variations of each other. For example
+            # this is used in the plant disease data set to group multiple pictures of
+            # the same leaf.
+            hash_name = re.sub(r'_nohash_.*$', '', file_name)
+            # This looks a bit magical, but we need to decide whether this file should
+            # go into the training, testing, or validation sets, and we want to keep
+            # existing files in the same set even if more files are subsequently
+            # added.
+            # To do that, we need a stable way of deciding based on just the file name
+            # itself, so we do a hash of that and then use that to generate a
+            # probability value that we use to assign it.
+            hash_name_hashed = hashlib.sha1(tf.compat.as_bytes(hash_name)).hexdigest()
+            percentage_hash = ((int(hash_name_hashed, 16) %
+                                (MAX_NUM_IMAGES_PER_CLASS + 1)) *
+                               (100.0 / MAX_NUM_IMAGES_PER_CLASS))
+            if percentage_hash < int(validation_percentage):
+                validation_images.append(base_name)
+            elif percentage_hash < (int(testing_percentage) + int(validation_percentage)):
+                testing_images.append(base_name)
+            else:
+                training_images.append(base_name)
+        result[label_name] = {
+            'dir': dir_name,
+            'training': training_images,
+            'testing': testing_images,
+            'validation': validation_images,
+        }
+    return result
+  
+def get_IMGDB_dataset(img_list_filename,
+                        subtract_mean=True,
+                        normalize_data=True):
+
+    def _parse_function(filename, label):
+        image_string = tf.read_file(filename)
+        image_decoded = tf.image.decode_png(image_string, channels=3)
+        #image_resized = tf.image.resize_images(image_decoded, [28, 28])
+        return image_decoded, label
+    
+    # A vector of filenames.
+    images_list, labels_list = fileio.parse_imgdb_list(txt_list=img_list_filename)
+    imgs = tf.constant(images_list)
+    
+    # `labels[i]` is the label for the image in `imgs[i]`.
+    labels = tf.constant(labels_list)
+    
+    dataset = tf.data.Dataset.from_tensor_slices((imgs, labels))
+    dataset = dataset.map(_parse_function) 
+    return dataset
+
+def dset_from_ordered_dict(file_lists, subset_flag):
+
+    def _parse_jpeg(filename, label):
+        image_string = tf.read_file(filename)
+        image_decoded = tf.image.decode_jpeg(image_string, channels=3)
+        image_resized = tf.image.resize_images(image_decoded, [224, 224])
+        return image_resized, label
+
+    num_classes = len(file_lists.keys())
+    samples_list = []
+    labels_list = []
+    label_number = 0
+
+    for label, value in file_lists.items():
+        samples_list += file_lists[label][subset_flag]
+        labels_list += [label_number] * len(file_lists[label][subset_flag])
+        label_number += 1
+
+    dset = tf.data.Dataset.from_tensor_slices((tf.constant(samples_list),
+                                              tf.constant(labels_list)))
+    dset = dset.map(_parse_jpeg)
+    return dset
