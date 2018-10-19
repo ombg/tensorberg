@@ -14,12 +14,19 @@ class Vgg16:
         self.is_training = None
         self.out_argmax = None
         self.loss = None
-        self.acc = None
+        self.accuracy = None
         self.optimizer = None
         self.train_step = None
         self.parameters = []
 
         self.build_model()
+
+    def load_weights_from_numpy(self, weight_file, sess):
+        weights = np.load(weight_file)
+        keys = sorted(weights.keys())
+        for i, k in enumerate(keys):
+            print( i, k, np.shape(weights[k]))
+            sess.run(self.parameters[i].assign(weights[k]))
 
     def build_model(self):
 
@@ -324,12 +331,12 @@ class Vgg16:
         # fc3
         with tf.variable_scope('fc3') as scope:
             fc3w = tf.get_variable(name='weights',
-                                   shape=[4096, 10],
+                                   shape=[4096, 1000],
                                    initializer=tf.glorot_uniform_initializer(),
                                    regularizer=tf.nn.l2_loss,
                                    trainable=True)
             fc3b = tf.get_variable(name='biases',
-                                   shape=[10],
+                                   shape=[1000],
                                    initializer=tf.zeros_initializer(),
                                    trainable=True)
             self.fc3l = tf.nn.bias_add(tf.matmul(self.fc2, fc3w), fc3b)

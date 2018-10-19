@@ -6,11 +6,11 @@ import tensorflow as tf
 from models.vggnet import Vgg16
 from trainers.default_trainer import Trainer
 
-from utils.datahandler import ImgdbLoader
+#from utils.datahandler import ImgdbLoader
+from utils.datahandler import ImageDirLoader
 from utils.config import process_config
 from utils.dirs import create_dirs
 from utils.utils import get_args
-
 
 def main():
     # capture the config path from the run arguments
@@ -30,7 +30,8 @@ def main():
     sess = tf.Session()
 
     # Loads data into a tf.dataset
-    data_loader = ImgdbLoader(config)
+    #data_loader = ImgdbLoader(config)
+    data_loader = ImageDirLoader(config)
 
     # create instance of the model 
     model = Vgg16(data_loader, config)
@@ -38,8 +39,9 @@ def main():
     # Trainer loops over the data using the model
     trainer = Trainer(sess, model, data_loader, config)
 
+    model.load_weights_from_numpy(config.weights_file, sess)
     # here you train your model
-    trainer.train()
+    #trainer.train()
 
 
 if __name__ == '__main__':

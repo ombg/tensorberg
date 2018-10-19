@@ -94,9 +94,15 @@ class ImageDirLoader:
                            config.testing_percentage,
                            config.validation_percentage)
         
-        self.train_dataset = dset_from_ordered_dict(image_lists, 'training')
-        self.val_dataset = dset_from_ordered_dict(image_lists, 'validation')
-        self.test_dataset = dset_from_ordered_dict(image_lists, 'testing')
+        self.train_dataset = dset_from_ordered_dict(image_lists,
+                                                    'training',
+                                                    self.config.batch_size)
+        self.val_dataset = dset_from_ordered_dict(image_lists, 
+                                                    'validation',
+                                                    self.config.batch_size)
+        self.test_dataset = dset_from_ordered_dict(image_lists, 
+                                                    'testing',
+                                                    self.config.batch_size)
         #self.num_batches = len(X_train) // self.config.batch_size
 
         self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
@@ -202,8 +208,11 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
     return result
   
 def get_IMGDB_dataset(img_list_filename,
-                        subtract_mean=True,
-                        normalize_data=True):
+                        subtract_mean=False,
+                        normalize_data=False):
+
+    if subtract_mean or normalize_data:
+        raise NotImplementedError
 
     def _parse_function(filename, label):
         image_string = tf.read_file(filename)
@@ -222,13 +231,13 @@ def get_IMGDB_dataset(img_list_filename,
     dataset = dataset.map(_parse_function) 
     return dataset
 
-def dset_from_ordered_dict(file_lists, subset_flag):
+def dset_from_ordered_dict(file_lists, subset_flag, batch_size=64):
 
-    def _parse_jpeg(filename, label):
+    def _parse_jpeg(filename):
         image_string = tf.read_file(filename)
         image_decoded = tf.image.decode_jpeg(image_string, channels=3)
         image_resized = tf.image.resize_images(image_decoded, [224, 224])
-        return image_resized, label
+        return image_resized
 
     num_classes = len(file_lists.keys())
     samples_list = []
@@ -240,7 +249,12 @@ def dset_from_ordered_dict(file_lists, subset_flag):
         labels_list += [label_number] * len(file_lists[label][subset_flag])
         label_number += 1
 
-    dset = tf.data.Dataset.from_tensor_slices((tf.constant(samples_list),
-                                              tf.constant(labels_list)))
-    dset = dset.map(_parse_jpeg)
+    dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(samples_list))
+    dset_x = dset_x.map(_parse_jpeg)
+    dset_y = tf.data.Dataset.from_tensor_slices(tf.constant(labels_list))
+    dset_y = dset_y.map(lambda z: tf.one_hot(z, num_classes))
+
+    dset = tf.data.Dataset.zip((dset_x, dset_y))
+    dset = dset.shuffle(buffer_size=len(samples_list))
+    dset = dset.repeat().batch(batch_size)
     return dset

@@ -34,9 +34,9 @@ class Trainer:
         saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
         # File writers for TensorBoard
         train_writer = tf.summary.FileWriter( 
-            self.config.summary_dir + '/run_' + str(run_id) + '/train', self.sess.graph)
+            self.config.summary_dir + 'run_' + str(run_id) + '/train', self.sess.graph)
         val_writer = tf.summary.FileWriter( 
-            self.config.summary_dir + '/run_' + str(run_id) + '/val', self.sess.graph)
+            self.config.summary_dir + 'run_' + str(run_id) + '/val', self.sess.graph)
     
         print(' Starting training now!')
         for i in range(self.config.num_epochs):
@@ -45,7 +45,7 @@ class Trainer:
             self.data_loader.initialize_train(self.sess)
             
             #Do not monitor, just train
-            for _ in range(self.data_loader.num_batches):
+            for _ in range(10):
                 self.sess.run(self.model.train_step)
     
             # Monitor the training every epoch
