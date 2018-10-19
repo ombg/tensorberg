@@ -12,6 +12,7 @@ from utils.config import process_config
 from utils.dirs import create_dirs
 from utils.utils import get_args
 
+
 def main():
     # capture the config path from the run arguments
     # then process the json configration file
@@ -31,18 +32,20 @@ def main():
 
     # Loads data into a tf.dataset
     #data_loader = ImgdbLoader(config)
-    data_loader = ImageDirLoader(config)
+    #data_loader = ImageDirLoader(config)
 
     # create instance of the model 
-    model = Vgg16(data_loader, config)
+    model = Vgg16(config)
 
     # Trainer loops over the data using the model
-    trainer = Trainer(sess, model, data_loader, config)
+    trainer = Trainer(sess, model, config)
 
     model.load_weights_from_numpy(config.weights_file, sess)
-    # here you train your model
+
     #trainer.train()
 
-
+    trainer.predict('/tmp/burrito.jpg')
+    
 if __name__ == '__main__':
     main()
+    print("Done!")

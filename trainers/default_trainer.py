@@ -1,9 +1,10 @@
 import tensorflow as tf
-
 import numpy as np
+from scipy.misc import imread, imresize
+from configs.imagenet_classes import class_names
 
 class Trainer:
-    def __init__(self, sess, model, data_loader, config):
+    def __init__(self, sess, model, config, data_loader=None):
         """
         Constructing the trainer
         :param sess: TF.Session() instance
@@ -16,8 +17,7 @@ class Trainer:
         self.model = model
         self.config = config
         self.sess = sess
-        if data_loader is not None:
-            self.data_loader = data_loader
+        self.data_loader = data_loader
 
         self.write_op = tf.summary.merge_all()
         # Initialize all variables of the graph
@@ -25,6 +25,9 @@ class Trainer:
         self.sess.run(self.init)
 
     def train(self):
+        if self.data_loader == None:
+            raise RuntimeError
+
         run_id = np.random.randint(1e6,size=1)[0]
         print('run_id: {}'.format(run_id))
         print('Initializing data...')
@@ -38,7 +41,7 @@ class Trainer:
         val_writer = tf.summary.FileWriter( 
             self.config.summary_dir + 'run_' + str(run_id) + '/val', self.sess.graph)
     
-        print(' Starting training now!')
+        tf.logging.info(' Starting training now!')
         for i in range(self.config.num_epochs):
     
             # Initialize iterator with training data
@@ -78,3 +81,37 @@ class Trainer:
         train_writer.close()
         val_writer.close()
 
+    def test(self):
+        if self.data_loader == None:
+            raise RuntimeError
+        tf.logging.info('Starting testing now!')
+        # Load test dataset
+        self.data_loader.initialize_test(self.sess)
+        global_step = tf.train.get_or_create_global_step()
+        accs = []
+        try:
+            while True:
+                fetches = [self.model.softmax, self.model.accuracy, global_step]
+                # Gets matrix [batch_size x num_classes] predictions
+                class_probs, accuracy, global_step_vl = self.sess.run(fetches)
+                print('#{}: test_acc: {:5.2f}%'.format(global_step_vl, acc * 100.0))
+                # Get top five
+                predictions_per_sample = (np.argsort(class_probs,axis=1)[::-1])[0:5]
+                print(predictions_per_sample)
+                #print(class_names[p], prob[p])
+        except tf.errors.OutOfRangeError:
+            pass
+
+    def predict(self, image_path, num_images=1):
+
+        if num_images == 1:
+            img1 = imread(image_path, mode='RGB')
+            img1 = imresize(img1, (224, 224))
+        else:
+            raise NotImplementedError
+
+        prob = self.sess.run(self.model.softmax,
+                                feed_dict={self.model.images: [img1]})[0]
+        preds = (np.argsort(prob)[::-1])[0:5]
+        for p in preds:
+            print(class_names[p], prob[p])

@@ -4,20 +4,26 @@ import tensorflow as tf
 import numpy as np
 
 class Vgg16:
-    def __init__(self, data_loader, config):
+    def __init__(self, config, data_loader=None):
 
-        self.data_loader = data_loader
+
         self.config = config
 
         self.images = None
         self.labels = None
-        self.is_training = None
         self.out_argmax = None
         self.loss = None
         self.accuracy = None
         self.optimizer = None
         self.train_step = None
+        self.softmax = None
         self.parameters = []
+
+        if data_loader != None:
+            self.images, self.labels = data_loader.get_input()
+        else:
+            self.images = tf.placeholder(tf.float32, [None, 224, 224, 3])
+            self.labels = tf.placeholder(tf.int32, [None])
 
         self.build_model()
 
@@ -33,13 +39,8 @@ class Vgg16:
         """
         Inputs to the network
         """
-        with tf.variable_scope('inputs'):
-            self.images, self.labels = self.data_loader.get_input()
-            self.is_training = tf.placeholder(tf.bool, name='Training_flag')
-
         tf.add_to_collection('inputs', self.images)
         tf.add_to_collection('inputs', self.labels)
-        tf.add_to_collection('inputs', self.is_training)
 
         """
         Network Architecture
@@ -359,3 +360,6 @@ class Vgg16:
             global_step=tf.train.get_or_create_global_step()
             self.optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
             self.train_step = self.optimizer.minimize(self.loss, global_step=global_step)
+
+        with tf.name_scope('test'):
+            self.softmax = tf.nn.softmax(self.fc3l)

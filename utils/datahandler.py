@@ -256,5 +256,8 @@ def dset_from_ordered_dict(file_lists, subset_flag, batch_size=64):
 
     dset = tf.data.Dataset.zip((dset_x, dset_y))
     dset = dset.shuffle(buffer_size=len(samples_list))
-    dset = dset.repeat().batch(batch_size)
-    return dset
+
+    if subset_flag is 'testing':
+        return dset.batch(batch_size)
+    else:
+        return dset.repeat().batch(batch_size)
