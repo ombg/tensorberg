@@ -309,8 +309,8 @@ class Vgg16:
                                    shape=[4096],
                                    initializer=tf.zeros_initializer(),
                                    trainable=True)
-            self.pool5_flat = tf.reshape(self.pool5, [-1, shape])
-            fc1l = tf.nn.bias_add(tf.matmul(self.pool5_flat, fc1w), fc1b)
+            pool5_flat = tf.reshape(self.pool5, [-1, shape])
+            fc1l = tf.nn.bias_add(tf.matmul(pool5_flat, fc1w), fc1b)
             self.fc1 = tf.nn.relu(fc1l)
             self.parameters += [fc1w, fc1b]
 

@@ -135,7 +135,7 @@ class Trainer:
 
         try:
             while True:
-                fetches = [self.model.pool5_flat, global_step]
+                fetches = [self.model.fc2, global_step]
                 # Gets matrix [batch_size x num_classes] predictions
                 bottleneck_batch, global_step_vl = self.sess.run(fetches)
         except tf.errors.OutOfRangeError:
