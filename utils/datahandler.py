@@ -95,14 +95,18 @@ class ImageDirLoader:
                            config.validation_percentage)
         
         self.train_dataset = dset_from_ordered_dict(image_lists,
-                                                    'training',
-                                                    self.config.batch_size)
+                                                    subset='training',
+                                                    batch_size=self.config.batch_size,
+                                                    do_shuffle=True)
         self.val_dataset = dset_from_ordered_dict(image_lists, 
-                                                    'validation',
-                                                    self.config.batch_size)
+                                                    subset='validation',
+                                                    batch_size=self.config.batch_size,
+                                                    do_shuffle=True)
         self.test_dataset = dset_from_ordered_dict(image_lists, 
-                                                    'testing',
-                                                    self.config.batch_size)
+                                                    subset='testing',
+                                                    batch_size=self.config.batch_size,
+                                                    do_shuffle=True,
+                                                    repetitions=1)
         #self.num_batches = len(X_train) // self.config.batch_size
 
         self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,

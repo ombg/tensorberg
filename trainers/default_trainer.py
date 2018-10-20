@@ -88,6 +88,7 @@ class Trainer:
         # Load test dataset
         self.data_loader.initialize_test(self.sess)
         global_step = tf.train.get_or_create_global_step()
+        #TODO
         accs = []
         try:
             while True:
@@ -115,3 +116,29 @@ class Trainer:
         preds = (np.argsort(prob)[::-1])[0:5]
         for p in preds:
             print(class_names[p], prob[p])
+
+    def cache_bottlenecks(self, subset):
+        if self.data_loader == None:
+            raise RuntimeError
+        tf.logging.info('Caching bottlenecks!')
+        global_step = tf.train.get_or_create_global_step()
+        global_step_vl = 0
+        # Load dataset
+        if subset == 'training':
+            self.data_loader.initialize_train(self.sess)
+            tf.logging.info('Reading training subset!')
+        elif subset == 'validation':
+            self.data_loader.initialize_val(self.sess)
+            tf.logging.info('Reading validation subset!')
+        else:
+            raise NotImplementedError
+
+        try:
+            while True:
+                fetches = [self.model.pool5_flat, global_step]
+                # Gets matrix [batch_size x num_classes] predictions
+                bottleneck_batch, global_step_vl = self.sess.run(fetches)
+        except tf.errors.OutOfRangeError:
+            pass
+        print('Global step: {}'.format(global_step_vl))
+        return bottlenecks
