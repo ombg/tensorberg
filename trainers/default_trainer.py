@@ -132,12 +132,14 @@ class Trainer:
             tf.logging.info('Reading validation subset!')
         else:
             raise NotImplementedError
-
+        botlenecks = []
         try:
             while True:
+                # fc2 penultimate layer, ReLu'd
                 fetches = [self.model.fc2, global_step]
                 # Gets matrix [batch_size x num_classes] predictions
                 bottleneck_batch, global_step_vl = self.sess.run(fetches)
+                bottlenecks.append(bottleneck_batch)
         except tf.errors.OutOfRangeError:
             pass
         print('Global step: {}'.format(global_step_vl))
