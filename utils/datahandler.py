@@ -85,27 +85,30 @@ class ImageDirLoader:
     """
     Loads images from a directory structure where the subdirectories define the labels.
     """
-    def __init__(self,config):
+    def __init__(self,config, do_shuffle=True):
         print('Loading data...')
         self.config = config
 
         #X_train, y_train, X_val, y_val, X_test, y_test = data
-        image_lists = create_image_lists(config.input_path,
-                           config.testing_percentage,
-                           config.validation_percentage)
+        self.image_lists = create_image_lists(config.input_path,
+                                              config.testing_percentage,
+                                              config.validation_percentage)
         
-        self.train_dataset = dset_from_ordered_dict(image_lists,
+        self.train_dataset = dset_from_ordered_dict(self.image_lists,
+                                                    config.input_path,
                                                     subset='training',
                                                     batch_size=self.config.batch_size,
-                                                    do_shuffle=True)
-        self.val_dataset = dset_from_ordered_dict(image_lists, 
+                                                    do_shuffle=do_shuffle)
+        self.val_dataset = dset_from_ordered_dict(self.image_lists, 
+                                                    config.input_path,
                                                     subset='validation',
                                                     batch_size=self.config.batch_size,
-                                                    do_shuffle=True)
-        self.test_dataset = dset_from_ordered_dict(image_lists, 
+                                                    do_shuffle=do_shuffle)
+        self.test_dataset = dset_from_ordered_dict(self.image_lists, 
+                                                    config.input_path,
                                                     subset='testing',
                                                     batch_size=self.config.batch_size,
-                                                    do_shuffle=True,
+                                                    do_shuffle=do_shuffle,
                                                     repetitions=1)
         #self.num_batches = len(X_train) // self.config.batch_size
 
@@ -126,7 +129,27 @@ class ImageDirLoader:
     def get_input(self):
         return self.iterator.get_next()
 
+def get_subset(ord_dict, root_dir, subset):
+
+    samples_list = []
+    labels_list = []
+    label_number = 0
+
+    for label, value in ord_dict.items():
+        samples_subset = ord_dict[label][subset]
+
+        #Prepend full path to every file name in the subset
+        samples_subset = [os.path.join(root_dir, ord_dict[label]['dir'], sample)
+                             for sample in samples_subset]
+
+        samples_list += samples_subset
+        labels_list += [label_number] * len(ord_dict[label][subset])
+        label_number += 1
+
+    return samples_list, labels_list
+
 def dset_from_ordered_dict(file_lists,
+                           root_dir,
                            subset,
                            batch_size=64,
                            do_shuffle=True,
@@ -139,15 +162,8 @@ def dset_from_ordered_dict(file_lists,
         return image_resized
 
     num_classes = len(file_lists.keys())
-    samples_list = []
-    labels_list = []
-    label_number = 0
 
-    for label, value in file_lists.items():
-        samples_list += file_lists[label][subset]
-        labels_list += [label_number] * len(file_lists[label][subset])
-        label_number += 1
-
+    samples_list, labels_list = get_subset(file_lists, root_dir, subset)
     dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(samples_list))
     dset_x = dset_x.map(_parse_jpeg)
     dset_y = tf.data.Dataset.from_tensor_slices(tf.constant(labels_list))

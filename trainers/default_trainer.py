@@ -1,6 +1,11 @@
+import sys
+
+sys.path.extend(['..'])
 import tensorflow as tf
 import numpy as np
 from scipy.misc import imread, imresize
+from utils.datahandler import get_subset
+
 from configs.imagenet_classes import class_names
 
 class Trainer:
@@ -88,8 +93,6 @@ class Trainer:
         # Load test dataset
         self.data_loader.initialize_test(self.sess)
         global_step = tf.train.get_or_create_global_step()
-        #TODO
-        accs = []
         try:
             while True:
                 fetches = [self.model.softmax, self.model.accuracy, global_step]
@@ -117,12 +120,11 @@ class Trainer:
         for p in preds:
             print(class_names[p], prob[p])
 
-    def cache_bottlenecks(self, subset):
+    def create_bottlenecks(self, subset):
         if self.data_loader == None:
             raise RuntimeError
-        tf.logging.info('Caching bottlenecks!')
+        tf.logging.info('Creating bottlenecks at ' + self.config.bottleneck_dir)
         global_step = tf.train.get_or_create_global_step()
-        global_step_vl = 0
         # Load dataset
         if subset == 'training':
             self.data_loader.initialize_train(self.sess)
@@ -132,15 +134,20 @@ class Trainer:
             tf.logging.info('Reading validation subset!')
         else:
             raise NotImplementedError
-        botlenecks = []
+
+        bottlenecks = []
         try:
+            image_list, _ = get_subset(self.data_loader.image_lists,
+                                    self.config.input_path,   
+                                    subset=subset)
             while True:
                 # fc2 penultimate layer, ReLu'd
                 fetches = [self.model.fc2, global_step]
                 # Gets matrix [batch_size x num_classes] predictions
                 bottleneck_batch, global_step_vl = self.sess.run(fetches)
-                bottlenecks.append(bottleneck_batch)
+                print('Global step: {}'.format(global_step_vl))
         except tf.errors.OutOfRangeError:
             pass
-        print('Global step: {}'.format(global_step_vl))
+        except KeyError:
+            print('bottlenecks not created.')
         return bottlenecks

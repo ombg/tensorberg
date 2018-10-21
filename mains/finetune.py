@@ -32,17 +32,19 @@ def main():
 
     # Loads data into a tf.dataset
     #data_loader = ImgdbLoader(config)
-    for_bottlenecks = ImageDirLoader(config)
+    image_data = ImageDirLoader(config)
 
     # create instance of the model 
-    model = Vgg16(config, data_loader=for_bottlenecks)
+    model = Vgg16(config, data_loader=image_data)
 
     # Trainer loops over the data using the model
-    trainer = Trainer(sess, model, config, data_loader=for_bottlenecks)
+    trainer = Trainer(sess, model, config, data_loader=image_data)
 
     model.load_weights_from_numpy(config.weights_file, sess)
 
-    trainer.cache_bottlenecks()
+    #trainer.predict('/tmp/flower_photos/daisy/10437929963_bc13eebe0c.jpg')
+    trainer.create_bottlenecks(subset='training')
+    #trainer.create_bottlenecks(subset='validation')
     
 if __name__ == '__main__':
     main()
