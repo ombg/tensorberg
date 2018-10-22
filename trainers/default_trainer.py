@@ -4,7 +4,7 @@ sys.path.extend(['..'])
 import tensorflow as tf
 import numpy as np
 from scipy.misc import imread, imresize
-from utils.datahandler import get_subset
+from utils import datahandler
 
 from configs.imagenet_classes import class_names
 
@@ -12,10 +12,9 @@ class Trainer:
     def __init__(self, sess, model, config, data_loader=None):
         """
         Constructing the trainer
-        :param sess: TF.Session() instance
+        :param sess: tF.Session() instance
         :param model: The model instance
         :param config: config namespace which will contain all the configurations you have specified in the json
-        :param logger: logger class which will summarize and write the values to the tensorboard
         :param data: The data loader if specified. 
         """
         # Assign all class attributes
@@ -135,19 +134,23 @@ class Trainer:
         else:
             raise NotImplementedError
 
-        bottlenecks = []
         try:
-            image_list, _ = get_subset(self.data_loader.image_lists,
-                                    self.config.input_path,   
-                                    subset=subset)
-            while True:
+            bottleneck_paths = datahandler.get_bottlenecks_from_ord_dict(
+                                              self.data_loader.image_lists,
+                                              self.config.bottleneck_dir,   
+                                              subset=subset)
+
+            for i, bn_path in enumerate(bottleneck_paths):
                 # fc2 penultimate layer, ReLu'd
-                fetches = [self.model.fc2, global_step]
-                # Gets matrix [batch_size x num_classes] predictions
-                bottleneck_batch, global_step_vl = self.sess.run(fetches)
-                print('Global step: {}'.format(global_step_vl))
-        except tf.errors.OutOfRangeError:
-            pass
+                fetches = [self.model.fc2]
+                #Get bottleneck feature vector for an image
+                bottleneck_values = self.sess.run(fetches)[0]
+                bottleneck_string = ','.join(str(x) for x in bottleneck_values.squeeze())
+                with open(bn_path, 'w') as bottleneck_file:
+                    bottleneck_file.write(bottleneck_string)
+                tf.logging.info('#{}: Written bottleneck to {}.'.format(i, bn_path))
+
         except KeyError:
-            print('bottlenecks not created.')
-        return bottlenecks
+            tf.logging.error('Bottlenecks not created.')
+        except OSError as e:
+            print(e)

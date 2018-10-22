@@ -3,6 +3,7 @@ import sys
 sys.path.extend(['..'])
 
 import tensorflow as tf
+
 from models.vggnet import Vgg16
 from trainers.default_trainer import Trainer
 
@@ -31,8 +32,7 @@ def main():
     sess = tf.Session()
 
     # Loads data into a tf.dataset
-    #data_loader = ImgdbLoader(config)
-    image_data = ImageDirLoader(config)
+    image_data = ImageDirLoader(config, do_shuffle=False, train_repetitions=1)
 
     # create instance of the model 
     model = Vgg16(config, data_loader=image_data)
@@ -47,5 +47,6 @@ def main():
     #trainer.create_bottlenecks(subset='validation')
     
 if __name__ == '__main__':
+    tf.logging.set_verbosity(tf.logging.INFO)
     main()
     print("Done!")
