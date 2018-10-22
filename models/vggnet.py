@@ -28,10 +28,10 @@ class Vgg16:
         self.build_model()
 
     def load_weights_from_numpy(self, weight_file, sess):
+        tf.logging.info('Loading pre-trained weights...')
         weights = np.load(weight_file)
         keys = sorted(weights.keys())
         for i, k in enumerate(keys):
-            print( i, k, np.shape(weights[k]))
             sess.run(self.parameters[i].assign(weights[k]))
 
     def build_model(self):
