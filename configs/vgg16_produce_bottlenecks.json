@@ -3,10 +3,10 @@
     "testing_percentage": "10",
     "validation_percentage": "10",
     "weights_file": "/tmp/vgg16_weights.npz",
-    "dataset_name": "cifar",
-    "exp_name": "vgg16_debug_cifar",
+    "dataset_name": "flowers",
+    "exp_name": "vgg16_bottlenecks_flowers",
     "num_epochs": 1,
     "learning_rate": 0.001,
-    "batch_size": 64,
+    "batch_size": 1,
     "max_to_keep":5
 }

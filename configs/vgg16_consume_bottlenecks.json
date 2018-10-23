@@ -1,0 +1,12 @@
+{
+    "input_path":"/home/oliver/projects/crowdnet/tensorberg/no_sync/experiments/vgg16_finetuning_flowers/bottlenecks",
+    "testing_percentage": "10",
+    "validation_percentage": "10",
+    "weights_file": "/tmp/vgg16_weights.npz",
+    "dataset_name": "flowers",
+    "exp_name": "train_output_4096_to_4",
+    "num_epochs": 30,
+    "learning_rate": 0.001,
+    "batch_size": 32,
+    "max_to_keep":5
+}
