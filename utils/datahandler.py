@@ -80,25 +80,25 @@ class ImgdbLoader:
     def get_input(self):
         return self.iterator.get_next()
 
-
 class ImageDirLoader:
     """
-    Loads images from a directory structure where the subdirectories define the labels.
+    Loads samples from a directory structure where the subdirectories define the labels.
     """
-    def __init__(self, config, do_shuffle=True, train_repetitions=-1):
+    def __init__(self, config, do_shuffle=True, is_jpg=True, train_repetitions=-1):
         print('Loading data...')
         self.config = config
 
         #X_train, y_train, X_val, y_val, X_test, y_test = data
-        self.image_lists = create_image_lists(config.input_path,
-                                              config.testing_percentage,
-                                              config.validation_percentage)
+        self.image_lists = create_file_lists(config.input_path,
+                                             config.testing_percentage,
+                                             config.validation_percentage)
         
         self.train_dataset = dset_from_ordered_dict(self.image_lists,
                                                     config.input_path,
                                                     subset='training',
                                                     batch_size=self.config.batch_size,
                                                     do_shuffle=do_shuffle,
+                                                    is_jpg=is_jpg,
                                                     repetitions=train_repetitions)
         if int(self.config.validation_percentage) > 0:
             self.val_dataset = dset_from_ordered_dict(self.image_lists, 
@@ -106,6 +106,7 @@ class ImageDirLoader:
                                                         subset='validation',
                                                         batch_size=self.config.batch_size,
                                                         do_shuffle=do_shuffle,
+                                                        is_jpg=is_jpg,
                                                         repetitions=train_repetitions)
         if int(self.config.testing_percentage) > 0:
             self.test_dataset = dset_from_ordered_dict(self.image_lists, 
@@ -113,11 +114,12 @@ class ImageDirLoader:
                                                         subset='testing',
                                                         batch_size=self.config.batch_size,
                                                         do_shuffle=do_shuffle,
+                                                        is_jpg=is_jpg,
                                                         repetitions=1)
         #self.num_batches = len(X_train) // self.config.batch_size
 
         self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
-                                                   self.train_dataset.output_shapes)
+                                                        self.train_dataset.output_shapes)
 
         self.training_init_op = self.iterator.make_initializer(self.train_dataset)
 
@@ -175,12 +177,19 @@ def get_bottlenecks_from_ord_dict(ord_dict, root_dir, subset):
 
     return samples_list
 
-def dset_from_ordered_dict(file_lists,
+def dset_from_ordered_dict(ord_dict,
                            root_dir,
                            subset,
                            batch_size=64,
                            do_shuffle=True,
-                           repetitions=-1):
+                           repetitions=-1,
+                           is_jpg=True):
+
+    num_classes = len(ord_dict.keys())
+
+    def _parse_txt(filename):
+        float_string = tf.read_file(filename)
+        return tf.string_split(float_string, delimiter=',')
 
     def _parse_jpeg(filename):
         image_string = tf.read_file(filename)
@@ -188,11 +197,12 @@ def dset_from_ordered_dict(file_lists,
         image_resized = tf.image.resize_images(image_decoded, [224, 224])
         return image_resized
 
-    num_classes = len(file_lists.keys())
-
-    samples_list, labels_list = get_files_from_ord_dict(file_lists, root_dir, subset)
+    samples_list, labels_list = get_files_from_ord_dict(ord_dict, root_dir, subset)
     dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(samples_list))
-    dset_x = dset_x.map(_parse_jpeg)
+    if is_jpg:
+        dset_x = dset_x.map(_parse_jpeg)
+    else:
+        dset_x = dset_x.map(_parse_txt)
     dset_y = tf.data.Dataset.from_tensor_slices(tf.constant(labels_list))
     dset_y = dset_y.map(lambda z: tf.one_hot(z, num_classes))
 
@@ -202,8 +212,8 @@ def dset_from_ordered_dict(file_lists,
 
     return dset.repeat(repetitions).batch(batch_size)
 
-def create_image_lists(image_dir, testing_percentage, validation_percentage):
-    """Builds a list of training images from the file system.
+def create_file_lists(image_dir, testing_percentage, validation_percentage):
+    """Builds a list of training samples from the file system.
   
     Analyzes the sub folders in the image directory, splits them into stable
     training, testing, and validation sets, and returns a data structure
@@ -220,7 +230,7 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
       The order of items defines the class indices.
     """
     if not tf.gfile.Exists(image_dir):
-        tf.logging.error("Image directory '" + image_dir + "' not found.")
+        tf.logging.error("Samples root directory '" + image_dir + "' not found.")
         raise FileNotFoundError
     result = collections.OrderedDict()
     sub_dirs = sorted(x[0] for x in tf.gfile.Walk(image_dir))
@@ -231,12 +241,12 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
             is_root_dir = False
             continue
         extensions = sorted(set(os.path.normcase(ext)  # Smash case on Windows.
-                              for ext in ['JPEG', 'JPG', 'jpeg', 'jpg']))
+                              for ext in ['txt', 'TXT', 'JPEG', 'JPG', 'jpeg', 'jpg']))
         file_list = []
         dir_name = os.path.basename(sub_dir)
         if dir_name == image_dir:
             continue
-        tf.logging.info("Looking for images in '" + dir_name + "'")
+        tf.logging.info("Looking for samples in '" + dir_name + "'")
         for extension in extensions:
             file_glob = os.path.join(image_dir, dir_name, '*.' + extension)
             file_list.extend(tf.gfile.Glob(file_glob))
@@ -245,10 +255,10 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
             continue
         if len(file_list) < 20:
             tf.logging.warning(
-                'WARNING: Folder has less than 20 images, which may cause issues.')
+                'WARNING: Folder has less than 20 samples, which may cause issues.')
         elif len(file_list) > MAX_NUM_IMAGES_PER_CLASS:
             tf.logging.warning(
-                'WARNING: Folder {} has more than {} images. Some images will '
+                'WARNING: Folder {} has more than {} samples. Some samples will '
                 'never be selected.'.format(dir_name, MAX_NUM_IMAGES_PER_CLASS))
         label_name = re.sub(r'[^a-z0-9]+', ' ', dir_name.lower())
         training_images = []
