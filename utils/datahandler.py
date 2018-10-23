@@ -189,12 +189,11 @@ def dset_from_ordered_dict(ord_dict,
 
     def _parse_txt(filename):
 
-        float_string = tf.read_file(filename)
+        raw_string = tf.read_file(filename)
         #TODO warn if values do not return constant number of bottleneck features
-        #x = tf.cast(tf.string_split([float_string], delimiter=',').values, dtype=tf.float32)
-        x = tf.strings.to_number(tf.string_split([float_string], delimiter=',').values, out_type=tf.float32)
-        return x
-        #return tf.sparse_tensor_to_dense(sparse_splitted_string)
+        raw_values = tf.string_split([raw_string], delimiter=',').values
+        float_values = tf.strings.to_number(raw_values, out_type=tf.float32)
+        return float_values
 
     def _parse_jpeg(filename):
         image_string = tf.read_file(filename)
