@@ -26,7 +26,7 @@ def main():
         exit(0)
 
     # create the experiments dirs
-    create_dirs([config.summary_dir, config.checkpoint_dir])
+    create_dirs([config.bottleneck_dir, config.summary_dir, config.checkpoint_dir])
 
     # create tensorflow session
     sess = tf.Session()
