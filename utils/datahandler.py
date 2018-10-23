@@ -102,20 +102,20 @@ class ImageDirLoader:
                                                     repetitions=train_repetitions)
         if int(self.config.validation_percentage) > 0:
             self.val_dataset = dset_from_ordered_dict(self.image_lists, 
-                                                        config.input_path,
-                                                        subset='validation',
-                                                        batch_size=self.config.batch_size,
-                                                        do_shuffle=do_shuffle,
-                                                        is_jpg=is_jpg,
-                                                        repetitions=train_repetitions)
+                                                      config.input_path,
+                                                      subset='validation',
+                                                      batch_size=self.config.batch_size,
+                                                      do_shuffle=do_shuffle,
+                                                      is_jpg=is_jpg,
+                                                      repetitions=train_repetitions)
         if int(self.config.testing_percentage) > 0:
             self.test_dataset = dset_from_ordered_dict(self.image_lists, 
-                                                        config.input_path,
-                                                        subset='testing',
-                                                        batch_size=self.config.batch_size,
-                                                        do_shuffle=do_shuffle,
-                                                        is_jpg=is_jpg,
-                                                        repetitions=1)
+                                                       config.input_path,
+                                                       subset='testing',
+                                                       batch_size=self.config.batch_size,
+                                                       do_shuffle=do_shuffle,
+                                                       is_jpg=is_jpg,
+                                                       repetitions=1)
         #self.num_batches = len(X_train) // self.config.batch_size
 
         self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
