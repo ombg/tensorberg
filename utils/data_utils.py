@@ -10,6 +10,31 @@ import platform
 from ompy import fileio
 from ompy import ml
 
+def float_string_to_list(filename):
+    """Converts a ascii list of float numbers to a python list of floats
+
+    Expects a filename to a file which holds one line of
+    comma-seperated values like
+    0.0, 0.86999977, ... 0.0, 0.0, 5.131418
+    It converts it to a python list of float values.
+    Args:
+        filename: A `string`, the full path to the file.
+    Returns:
+        A Python `list` of float values from the specified file.
+    Raises:
+        `ValueError` if the values are invalid
+        `FileNotFoundError` if filename is not a file.
+    """
+    try:
+        with open(filename, 'r') as the_file:
+            bottleneck_string = the_file.read()
+        bottleneck_values = [float(x) for x in bottleneck_string.split(',')]
+    except ValueError:
+        print('Invalid float found')
+    except FileNotFoundError:
+        print('Cannot find file: %s'.format(bottleneck_path))
+    return bottleneck_values
+
 def print_shape(data):
     try:
         d = iter(data)
