@@ -42,9 +42,8 @@ def main():
 
     model.load_weights_from_numpy(config.weights_file, sess)
 
-    #trainer.predict('/tmp/flower_photos/daisy/10437929963_bc13eebe0c.jpg')
     trainer.create_bottlenecks(subset='training')
-    #trainer.create_bottlenecks(subset='validation')
+    trainer.create_bottlenecks(subset='validation')
     
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)

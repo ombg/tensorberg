@@ -1,5 +1,5 @@
 {
-    "input_path":"/home/oliver/projects/crowdnet/tensorberg/no_sync/experiments/vgg16_finetuning_flowers/bottlenecks",
+    "input_path":"/home/oliver/projects/crowdnet/tensorberg/no_sync/experiments/vgg16_bottlenecks_flowers/bottlenecks",
     "testing_percentage": "10",
     "validation_percentage": "10",
     "weights_file": "/tmp/vgg16_weights.npz",

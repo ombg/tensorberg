@@ -38,11 +38,13 @@ def main():
 
     # create instance of the model 
     model = FullyConnectedNet(config, data_loader=bottlenecks_tensor)
-
+    bottlenecks_tensor.initialize_train(sess)
+    bns = sess.run(model.bottlenecks)
+    print(type(bns))
     # Trainer loops over the data using the model
-    trainer = Trainer(sess, model, config, data_loader=bottlenecks_tensor)
+    #trainer = Trainer(sess, model, config, data_loader=bottlenecks_tensor)
 
-    trainer.train()
+    #trainer.train()
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
