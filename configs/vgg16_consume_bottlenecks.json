@@ -5,8 +5,9 @@
     "weights_file": "/tmp/vgg16_weights.npz",
     "dataset_name": "flowers",
     "exp_name": "train_output_4096_to_4",
-    "num_epochs": 30,
+    "checkpoint_to_restore": "run_985039",
+    "num_epochs": 15,
     "learning_rate": 0.001,
-    "batch_size": 32,
+    "batch_size": 64,
     "max_to_keep":5
 }

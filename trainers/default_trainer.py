@@ -80,12 +80,19 @@ class Trainer:
             val_writer.flush()
 
         save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(run_id))
-        print('Model checkpoint saved to %s' % save_path)
+        tf.logging.info('Model checkpoint saved to %s' % save_path)
     
         train_writer.close()
         val_writer.close()
 
-    def test(self):
+    def test(self, checkpoint_dir=None):
+
+        # Load parameters
+        if checkpoint_dir != None:
+            saver = tf.train.Saver()
+            saver.restore(self.sess, checkpoint_dir)
+
+        # Check if test data is loaded
         if self.data_loader == None:
             raise RuntimeError
         tf.logging.info('Starting testing now!')
@@ -96,7 +103,7 @@ class Trainer:
             while True:
                 fetches = [self.model.softmax, self.model.accuracy, global_step]
                 # Gets matrix [batch_size x num_classes] predictions
-                class_probs, accuracy, global_step_vl = self.sess.run(fetches)
+                class_probs, acc, global_step_vl = self.sess.run(fetches)
                 print('#{}: test_acc: {:5.2f}%'.format(global_step_vl, acc * 100.0))
                 # Get top five
                 predictions_per_sample = (np.argsort(class_probs,axis=1)[::-1])[0:5]
