@@ -84,7 +84,12 @@ class ImageDirLoader:
     """
     Loads samples from a directory structure where the subdirectories define the labels.
     """
-    def __init__(self, config, do_shuffle=True, is_jpg=True, train_repetitions=-1):
+    def __init__(self,
+                 config,
+                 do_shuffle=True,
+                 is_jpg=True,
+                 train_repetitions=-1):
+
         print('Loading data...')
         self.config = config
 
@@ -93,7 +98,8 @@ class ImageDirLoader:
                                              config.testing_percentage,
                                              config.validation_percentage)
         
-        self.train_dataset = dset_from_ordered_dict(self.image_lists,
+        self.train_dataset, self.num_samples = dset_from_ordered_dict(
+                                                    self.image_lists,
                                                     config.input_path,
                                                     subset='training',
                                                     batch_size=self.config.batch_size,
@@ -101,22 +107,34 @@ class ImageDirLoader:
                                                     is_jpg=is_jpg,
                                                     repetitions=train_repetitions)
         if int(self.config.validation_percentage) > 0:
-            self.val_dataset = dset_from_ordered_dict(self.image_lists, 
-                                                      config.input_path,
-                                                      subset='validation',
-                                                      batch_size=self.config.batch_size,
-                                                      do_shuffle=do_shuffle,
-                                                      is_jpg=is_jpg,
-                                                      repetitions=train_repetitions)
+            self.val_dataset, _ = dset_from_ordered_dict(
+                                      self.image_lists, 
+                                      config.input_path,
+                                      subset='validation',
+                                      batch_size=self.config.batch_size,
+                                      do_shuffle=do_shuffle,
+                                      is_jpg=is_jpg,
+                                      repetitions=train_repetitions)
         if int(self.config.testing_percentage) > 0:
-            self.test_dataset = dset_from_ordered_dict(self.image_lists, 
-                                                       config.input_path,
-                                                       subset='testing',
-                                                       batch_size=self.config.batch_size,
-                                                       do_shuffle=do_shuffle,
-                                                       is_jpg=is_jpg,
-                                                       repetitions=1)
-        #self.num_batches = len(X_train) // self.config.batch_size
+
+            # Save test set for later
+            if self.config.testset_list_path != None:
+                images, labels = get_files_from_ord_dict(
+                                     self.image_lists,
+                                     config.input_path,
+                                     subset='testing')
+
+                testset_list = ['{} {}\n'.format(a[0], a[1]) for a in zip(images, labels)]
+                fileio.write_txt_file(self.config.testset_list_path, testset_list)
+
+            self.test_dataset, _ = dset_from_ordered_dict(
+                                       self.image_lists, 
+                                       config.input_path,
+                                       subset='testing',
+                                       batch_size=self.config.batch_size,
+                                       do_shuffle=do_shuffle,
+                                       is_jpg=is_jpg,
+                                       repetitions=1)
 
         self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
                                                         self.train_dataset.output_shapes)
@@ -127,6 +145,8 @@ class ImageDirLoader:
             self.val_init_op = self.iterator.make_initializer(self.val_dataset)
         if int(self.config.testing_percentage) > 0:
             self.test_init_op = self.iterator.make_initializer(self.test_dataset)
+
+        self.num_batches = self.num_samples // self.config.batch_size
 
 
     def initialize_train(self, sess):
@@ -165,7 +185,7 @@ def get_bottlenecks_from_ord_dict(ord_dict, root_dir, subset):
     for label, value in ord_dict.items():
         samples_subset = ord_dict[label][subset]
 
-        os.makedirs(os.path.join(root_dir, ord_dict[label]['dir']))
+        os.makedirs(os.path.join(root_dir, ord_dict[label]['dir']), exist_ok=True)
         # Prepend full path to every file name in the subset
         # Replace image file extension with bottleneck file extension
         samples_subset = [os.path.join(root_dir,
@@ -214,7 +234,9 @@ def dset_from_ordered_dict(ord_dict,
     if do_shuffle:
         dset = dset.shuffle(buffer_size=len(samples_list))
 
-    return dset.repeat(repetitions).batch(batch_size)
+    dset = dset.repeat(repetitions).batch(batch_size)
+    num_samples = len(samples_list)
+    return dset, num_samples
 
 def create_file_lists(image_dir, testing_percentage, validation_percentage):
     """Builds a list of training samples from the file system.

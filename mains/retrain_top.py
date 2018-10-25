@@ -26,7 +26,7 @@ def main():
 
     # create the experiments dirs
     #create_dirs([config.summary_dir, config.checkpoint_dir])
-
+    config.testset_list_path = None
     # create tensorflow session
     sess = tf.Session()
 
@@ -42,8 +42,9 @@ def main():
     # Trainer loops over the data using the model
     trainer = Trainer(sess, model, config, data_loader=bottlenecks_tensor)
 
-    #trainer.train()
-    trainer.test(config.checkpoint_dir_restore)
+    trainer.train()
+    #trainer.test(config.checkpoint_dir_restore)
+    trainer.test()
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
