@@ -5,6 +5,7 @@ import tensorflow as tf
 import numpy as np
 from scipy.misc import imread, imresize
 from utils import datahandler
+from tqdm import tqdm
 
 from configs.imagenet_classes import class_names
 
@@ -45,14 +46,14 @@ class Trainer:
         val_writer = tf.summary.FileWriter( 
             self.config.summary_dir + 'run_' + str(run_id) + '/val', self.sess.graph)
     
-        tf.logging.info(' Starting training now!')
+        tf.logging.info('Training for {} epochs...'.format(self.config.num_epochs))
         for i in range(self.config.num_epochs):
-    
+            tf.logging.info('===== EPOCH {} ====='.format(i))
             # Initialize iterator with training data
             self.data_loader.initialize_train(self.sess)
             
             #Do not monitor, just train
-            for _ in range(10):
+            for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
                 self.sess.run(self.model.train_step)
     
             # Monitor the training every epoch
@@ -61,6 +62,7 @@ class Trainer:
                        self.model.accuracy,
                        self.write_op,
                        global_step]
+
             _,loss_vl, train_acc, summary_train, global_step_vl = self.sess.run(fetches)
             train_writer.add_summary(summary_train, global_step=global_step_vl)
             train_writer.flush()
@@ -148,14 +150,14 @@ class Trainer:
                                               subset=subset)
 
             for i, bn_path in enumerate(bottleneck_paths):
-                # fc2 penultimate layer, ReLu'd
+                # Specify bottleneck layer here:
                 fetches = [self.model.fc2]
                 #Get bottleneck feature vector for an image
                 bottleneck_values = self.sess.run(fetches)[0]
                 bottleneck_string = ','.join(str(x) for x in bottleneck_values.squeeze())
                 with open(bn_path, 'w') as bottleneck_file:
                     bottleneck_file.write(bottleneck_string)
-                tf.logging.info('#{}: Written bottleneck to {}.'.format(i, bn_path))
+                tf.logging.info('#{}: Written bottleneck to {}'.format(i, bn_path))
 
         except KeyError:
             tf.logging.error('Bottlenecks not created.')
