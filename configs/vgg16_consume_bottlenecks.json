@@ -1,13 +1,14 @@
 {
-    "input_path":"/home/oliver/projects/crowdnet/tensorberg/no_sync/experiments/vgg16_bottlenecks_flowers/bottlenecks",
+    "input_path":"/home/oliver/projects/crowdnet/tensorberg/no_sync/experiments/imgdb_vgg16_fc2_4096_cl4/bottlenecks/",
+    "testset_list_path": "dummy",
     "testing_percentage": "10",
     "validation_percentage": "10",
     "weights_file": "/tmp/vgg16_weights.npz",
-    "dataset_name": "flowers",
-    "exp_name": "train_output_4096_to_4",
+    "dataset_name": "imgdb",
+    "exp_name": "imgdb_vgg16_fc2_4096_cl4",
     "checkpoint_to_restore": "run_985039",
     "num_epochs": 15,
     "learning_rate": 0.001,
     "batch_size": 64,
-    "max_to_keep":5
+    "max_to_keep": 5
 }

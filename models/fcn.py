@@ -46,12 +46,12 @@ class FullyConnectedNet:
         # fc3
         with tf.variable_scope('fc3') as scope:
             fc3w = tf.get_variable(name='weights',
-                                   shape=[4096, 5],
+                                   shape=[4096, 4],
                                    initializer=tf.glorot_uniform_initializer(),
                                    regularizer=tf.nn.l2_loss,
                                    trainable=True)
             fc3b = tf.get_variable(name='biases',
-                                   shape=[5],
+                                   shape=[4],
                                    initializer=tf.zeros_initializer(),
                                    trainable=True)
             self.fc3l = tf.nn.bias_add(tf.matmul(self.bottlenecks, fc3w), fc3b)
