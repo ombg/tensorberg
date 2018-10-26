@@ -16,11 +16,15 @@ from utils.utils import get_args
 
 def main():
     # capture the config path from the run arguments
-    # then process the json configration file
+    # then process the json configration file and print it
     try:
         args = get_args()
         config = process_config(args.config)
-
+        # create the experiments dirs
+        #create_dirs([config.summary_dir, config.checkpoint_dir])
+        config.testset_list_path = None
+        tf.logging.info('==== Configuration ====')
+        tf.logging.info(pprint.pprint(config))
     except Exception as e:
         print("missing or invalid arguments %s" % e)
         exit(0)
