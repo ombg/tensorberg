@@ -1,4 +1,5 @@
 import sys
+import pprint
 
 sys.path.extend(['..'])
 
@@ -19,14 +20,16 @@ def main():
     try:
         args = get_args()
         config = process_config(args.config)
+        # create the experiments dirs
+        #create_dirs([config.summary_dir, config.checkpoint_dir])
+        config.testset_list_path = None
+        tf.logging.info('==== Configuration ====')
+        tf.logging.info(pprint.pprint(config))
 
     except Exception as e:
-        print("missing or invalid arguments %s" % e)
+        tf.logging.error("missing or invalid arguments %s" % e)
         exit(0)
 
-    # create the experiments dirs
-    #create_dirs([config.summary_dir, config.checkpoint_dir])
-    config.testset_list_path = None
     # create tensorflow session
     sess = tf.Session()
 

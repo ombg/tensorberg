@@ -73,7 +73,7 @@ class Trainer:
                            self.write_op,
                            global_step]
             val_loss, val_acc, summary_val, global_step_vl = self.sess.run(fetches_val)
-            print(('#{}: train_loss: {:5.2f} train_acc: {:5.2f}%' 
+            tf.logging.info(('#{}: train_loss: {:5.2f} train_acc: {:5.2f}%' 
                    ' val_loss: {:5.2f} val_acc: {:5.2f}%').format(
                 global_step_vl,
                 loss_vl, train_acc*100.0,
@@ -149,7 +149,7 @@ class Trainer:
                                               self.config.bottleneck_dir,   
                                               subset=subset)
 
-            for i, bn_path in enumerate(bottleneck_paths):
+            for bn_path in tqdm(bottleneck_paths,ascii=True, desc='bottlenecks'):
                 # Specify bottleneck layer here:
                 fetches = [self.model.fc2]
                 #Get bottleneck feature vector for an image
@@ -157,7 +157,6 @@ class Trainer:
                 bottleneck_string = ','.join(str(x) for x in bottleneck_values.squeeze())
                 with open(bn_path, 'w') as bottleneck_file:
                     bottleneck_file.write(bottleneck_string)
-                tf.logging.info('#{}: Written bottleneck to {}'.format(i, bn_path))
 
         except KeyError:
             tf.logging.error('Bottlenecks not created.')
