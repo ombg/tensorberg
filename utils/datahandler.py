@@ -87,7 +87,7 @@ class ImageDirLoader:
     def __init__(self,
                  config,
                  do_shuffle=True,
-                 is_jpg=True,
+                 is_png=True,
                  train_repetitions=-1):
 
         print('Loading data...')
@@ -104,7 +104,7 @@ class ImageDirLoader:
                                                     subset='training',
                                                     batch_size=self.config.batch_size,
                                                     do_shuffle=do_shuffle,
-                                                    is_jpg=is_jpg,
+                                                    is_png=is_png,
                                                     repetitions=train_repetitions)
         if int(self.config.validation_percentage) > 0:
             self.val_dataset, _ = dset_from_ordered_dict(
@@ -113,7 +113,7 @@ class ImageDirLoader:
                                       subset='validation',
                                       batch_size=self.config.batch_size,
                                       do_shuffle=do_shuffle,
-                                      is_jpg=is_jpg,
+                                      is_png=is_png,
                                       repetitions=train_repetitions)
         if int(self.config.testing_percentage) > 0:
 
@@ -133,7 +133,7 @@ class ImageDirLoader:
                                        subset='testing',
                                        batch_size=self.config.batch_size,
                                        do_shuffle=do_shuffle,
-                                       is_jpg=is_jpg,
+                                       is_png=is_png,
                                        repetitions=1)
 
         self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
@@ -203,7 +203,7 @@ def dset_from_ordered_dict(ord_dict,
                            batch_size=64,
                            do_shuffle=True,
                            repetitions=-1,
-                           is_jpg=True):
+                           is_png=True):
 
     num_classes = len(ord_dict.keys())
 
@@ -215,16 +215,16 @@ def dset_from_ordered_dict(ord_dict,
         float_values = tf.strings.to_number(raw_values, out_type=tf.float32)
         return float_values
 
-    def _parse_jpeg(filename):
+    def _parse_png(filename):
         image_string = tf.read_file(filename)
-        image_decoded = tf.image.decode_jpeg(image_string, channels=3)
+        image_decoded = tf.image.decode_png(image_string, channels=3)
         image_resized = tf.image.resize_images(image_decoded, [224, 224])
         return image_resized
 
     samples_list, labels_list = get_files_from_ord_dict(ord_dict, root_dir, subset)
     dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(samples_list))
-    if is_jpg:
-        dset_x = dset_x.map(_parse_jpeg)
+    if is_png:
+        dset_x = dset_x.map(_parse_png)
     else:
         dset_x = dset_x.map(_parse_txt)
     dset_y = tf.data.Dataset.from_tensor_slices(tf.constant(labels_list))
@@ -267,7 +267,7 @@ def create_file_lists(image_dir, testing_percentage, validation_percentage):
             is_root_dir = False
             continue
         extensions = sorted(set(os.path.normcase(ext)  # Smash case on Windows.
-                              for ext in ['txt', 'TXT', 'JPEG', 'JPG', 'jpeg', 'jpg']))
+                              for ext in ['txt', 'TXT', 'PNG', 'png']))
         file_list = []
         dir_name = os.path.basename(sub_dir)
         if dir_name == image_dir:

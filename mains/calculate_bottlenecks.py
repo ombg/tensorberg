@@ -32,7 +32,10 @@ def main():
     sess = tf.Session()
 
     # Loads data into a tf.dataset
-    image_data = ImageDirLoader(config, do_shuffle=False, train_repetitions=1)
+    image_data = ImageDirLoader(config,
+                                do_shuffle=True,
+                                is_png=True,
+                                train_repetitions=1)
 
     # create instance of the model 
     model = Vgg16(config, data_loader=image_data)

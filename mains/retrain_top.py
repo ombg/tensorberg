@@ -36,7 +36,7 @@ def main():
     # Loads data into a tf.dataset
     bottlenecks_tensor = ImageDirLoader(config,
                                         do_shuffle=True,
-                                        is_jpg=False,
+                                        is_png=False,
                                         train_repetitions=-1)
 
     # create instance of the model 
