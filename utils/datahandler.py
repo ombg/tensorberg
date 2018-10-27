@@ -11,7 +11,8 @@ This class will contain different loaders for cifar 100 dataset
 
 Supports IMGDB4 and CIFAR dataset
 """
-from utils import data_utils, dirs
+import data_utils, dirs
+#from utils import data_utils, dirs
 from ompy import fileio
 
 import collections
@@ -324,7 +325,10 @@ def create_file_lists(image_dir, testing_percentage, validation_percentage):
         }
     return result
 
-def create_file_lists_from_list(txt_file, testing_percentage, validation_percentage):
+def create_file_lists_from_list(txt_file,
+                                testing_percentage,
+                                validation_percentage,
+                                class_names=None):
     """Builds a list of training samples from a txt file.
   
     It parses the txt file. The txt file contains full paths to files and
@@ -344,14 +348,18 @@ def create_file_lists_from_list(txt_file, testing_percentage, validation_percent
       The order of items defines the class indices.
     """
     if not tf.gfile.Exists(txt_file):
-        tf.logging.error("Samples root directory '" + txt_file + "' not found.")
+        tf.logging.error("File with samples '" + txt_file + "' not found.")
         raise FileNotFoundError
-    result = collections.OrderedDict()
     tf.logging.info("Looking for samples in '" + txt_file + "'")
     file_list, label_list = fileio.parse_imgdb_list(txt_file)
+
+    if class_names != None:
+        assert len(class_names) == len(np.unique(label_list))
+    else:
+        class_names = np.unique(label_list)
+
     if not file_list:
         tf.logging.warning('No files found')
-        continue
     if len(file_list) < 20:
         tf.logging.warning(
             'WARNING: Folder has less than 20 samples, which may cause issues.')
@@ -359,32 +367,30 @@ def create_file_lists_from_list(txt_file, testing_percentage, validation_percent
         tf.logging.warning(
             'WARNING: List {} has more than {} samples. Some samples will '
             'never be selected.'.format(txt_file, MAX_NUM_IMAGES_PER_CLASS))
-    training_images = []
-    testing_images = []
-    validation_images = []
+
+    result = collections.OrderedDict()
+    for c in range(len(class_names)):
+        result[c] = {
+            'dir': str(class_names[c]),
+            'training': [],
+            'testing': [],
+            'validation': [] }
+
     for i, file_name in enumerate(file_list):
+        current_label = label_list[i]
         #base_name = os.path.basename(file_name)
-        nt = int(len(file_list) * (1.0 - int(validation_percentage) - int(testing_percentage)) 
-        nv = int(len(file_list) * int(validation_percentage))
-        X_train = X[:nt]
-        y_train = y[:nt]
-        X_val = X[nt:nt+nv]
-        y_val = y[nt:nt+nv]
-        X_test = X[nt+nv:]
-        y_test = y[nt+nv:]
+        nt = (int(len(file_list)) *
+             (1.0 -
+              0.01 * (int(validation_percentage) + int(testing_percentage))))
+        nv = int(0.01 * len(file_list) * int(validation_percentage))
+
         if i < nt:
-            training_images.append(file_name)
+            result[current_label]['training'].append(file_name)
         elif i >= nt+nv:
-            testing_images.append(file_name)
+            result[current_label]['testing'].append(file_name)
         else:
-            validation_images.append(file_name)
-        # TODO Storage does not work like this.
-        result[int(label_list[i])] = {
-            'dir': label_name[int(label_list[i])],
-            'training': training_images,
-            'testing': testing_images,
-            'validation': validation_images,
-        }
+            result[current_label]['validation'].append(file_name)
+
     return result
   
 def get_IMGDB_dataset(img_list_filename,
