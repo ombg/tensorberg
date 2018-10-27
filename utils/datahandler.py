@@ -15,6 +15,7 @@ import data_utils, dirs
 #from utils import data_utils, dirs
 from ompy import fileio
 
+from abc import ABC, abstractmethod
 import collections
 import os
 import hashlib
@@ -82,10 +83,7 @@ class ImgdbLoader:
     def get_input(self):
         return self.iterator.get_next()
 
-class ImageDirLoader:
-    """
-    Loads samples from a directory structure where the subdirectories define the labels.
-    """
+class AbstractDatasetLoader(ABC):
     def __init__(self,
                  config,
                  do_shuffle=True,
@@ -95,11 +93,8 @@ class ImageDirLoader:
         print('Loading data...')
         self.config = config
 
-        #X_train, y_train, X_val, y_val, X_test, y_test = data
-        self.image_lists = create_file_lists(config.input_path,
-                                             config.testing_percentage,
-                                             config.validation_percentage)
-        
+        self.image_lists = self.create_file_lists()
+
         self.train_dataset, self.num_samples = dset_from_ordered_dict(
                                                     self.image_lists,
                                                     config.input_path,
@@ -150,6 +145,9 @@ class ImageDirLoader:
 
         self.num_batches = self.num_samples // self.config.batch_size
 
+    @abstractmethod
+    def create_file_lists():
+        pass
 
     def initialize_train(self, sess):
         sess.run(self.training_init_op)
@@ -159,6 +157,157 @@ class ImageDirLoader:
         sess.run(self.test_init_op)
     def get_input(self):
         return self.iterator.get_next()
+
+
+class FileListDatasetLoader(AbstractDatasetLoader):
+
+    def create_file_lists(self):
+        """Builds a list of training samples from a txt file.
+      
+        It parses the txt file. The txt file contains full paths to files and
+        a class label.  Each line has exactly one (filename, label) pair,
+        seperated by a space. After reading the files list, it splits them into stable
+        training, testing, and validation sets, and returns a data structure
+        describing the lists of images for each label and their paths.
+      
+        Returns:
+          An OrderedDict containing an entry for each label subfolder, with images
+          split into training, testing, and validation sets within each label.
+          The order of items defines the class indices.
+        """
+        if not tf.gfile.Exists(self.config.input_path):
+            tf.logging.error("File with samples '" + self.config.input_path + "' not found.")
+            raise FileNotFoundError
+        tf.logging.info("Looking for samples in '" + self.config.input_path + "'")
+        file_list, label_list = fileio.parse_imgdb_list(self.config.input_path)
+    
+        try:
+            #_class_names = __import__('crowdnet_classes', fromlist=['class_names'])
+            __import__(class_names, fromlist=[crowdnet_classes])
+        except ImportError:
+            tf.logging.warning('No class names have been found. Using a simple counter')
+            class_names = np.unique(label_list)
+        else:
+            assert len(class_names) == len(np.unique(label_list))
+    
+        if not file_list:
+            tf.logging.warning('No files found')
+        if len(file_list) < 20:
+            tf.logging.warning(
+                'WARNING: Folder has less than 20 samples, which may cause issues.')
+        elif len(file_list) > MAX_NUM_IMAGES_PER_CLASS:
+            tf.logging.warning(
+                'WARNING: List {} has more than {} samples. Some samples will '
+                'never be selected.'.format(self.config.input_path, MAX_NUM_IMAGES_PER_CLASS))
+    
+        result = collections.OrderedDict()
+        for c in range(len(class_names)):
+            result[c] = {
+                'dir': str(class_names[c]),
+                'training': [],
+                'testing': [],
+                'validation': [] }
+    
+        for i, file_name in enumerate(file_list):
+            current_label = label_list[i]
+            nt = (int(len(file_list)) *
+                 (1.0 -
+                  0.01 * (int(self.config.validation_percentage) +
+                          int(self.config.testing_percentage))))
+
+            nv = int(0.01 * len(file_list) * int(self.config.validation_percentage))
+    
+            if i < nt:
+                result[current_label]['training'].append(file_name)
+            elif i >= nt+nv:
+                result[current_label]['testing'].append(file_name)
+            else:
+                result[current_label]['validation'].append(file_name)
+    
+        return result
+
+class DirectoryDatasetLoader(AbstractDatasetLoader):
+
+    def create_file_lists(self):
+        """Builds a list of training samples from the file system.
+      
+        Analyzes the sub folders in the image directory, splits them into stable
+        training, testing, and validation sets, and returns a data structure
+        describing the lists of images for each label and their paths.
+      
+        Returns:
+          An OrderedDict containing an entry for each label subfolder, with images
+          split into training, testing, and validation sets within each label.
+          The order of items defines the class indices.
+        """
+        if not tf.gfile.Exists(self.config.input_path):
+            tf.logging.error("Samples root directory '" + self.config.input_path + "' not found.")
+            raise FileNotFoundError
+        result = collections.OrderedDict()
+        sub_dirs = sorted(x[0] for x in tf.gfile.Walk(self.config.input_path))
+        # The root directory comes first, so skip it.
+        is_root_dir = True
+        for sub_dir in sub_dirs:
+            if is_root_dir:
+                is_root_dir = False
+                continue
+            extensions = sorted(set(os.path.normcase(ext)  # Smash case on Windows.
+                                  for ext in ['txt', 'TXT', 'PNG', 'png']))
+            file_list = []
+            dir_name = os.path.basename(sub_dir)
+            if dir_name == self.config.input_path:
+                continue
+            tf.logging.info("Looking for samples in '" + dir_name + "'")
+            for extension in extensions:
+                file_glob = os.path.join(self.config.input_path, dir_name, '*.' + extension)
+                file_list.extend(tf.gfile.Glob(file_glob))
+            if not file_list:
+                tf.logging.warning('No files found')
+                continue
+            if len(file_list) < 20:
+                tf.logging.warning(
+                    'WARNING: Folder has less than 20 samples, which may cause issues.')
+            elif len(file_list) > MAX_NUM_IMAGES_PER_CLASS:
+                tf.logging.warning(
+                    'WARNING: Folder {} has more than {} samples. Some samples will '
+                    'never be selected.'.format(dir_name, MAX_NUM_IMAGES_PER_CLASS))
+            label_name = re.sub(r'[^a-z0-9]+', ' ', dir_name.lower())
+            training_images = []
+            testing_images = []
+            validation_images = []
+            for file_name in file_list:
+                base_name = os.path.basename(file_name)
+                # We want to ignore anything after '_nohash_' in the file name when
+                # deciding which set to put an image in, the data set creator has a way of
+                # grouping photos that are close variations of each other. For example
+                # this is used in the plant disease data set to group multiple pictures of
+                # the same leaf.
+                hash_name = re.sub(r'_nohash_.*$', '', file_name)
+                # This looks a bit magical, but we need to decide whether this file should
+                # go into the training, testing, or validation sets, and we want to keep
+                # existing files in the same set even if more files are subsequently
+                # added.
+                # To do that, we need a stable way of deciding based on just the file name
+                # itself, so we do a hash of that and then use that to generate a
+                # probability value that we use to assign it.
+                hash_name_hashed = hashlib.sha1(tf.compat.as_bytes(hash_name)).hexdigest()
+                percentage_hash = ((int(hash_name_hashed, 16) %
+                                    (MAX_NUM_IMAGES_PER_CLASS + 1)) *
+                                   (100.0 / MAX_NUM_IMAGES_PER_CLASS))
+                if percentage_hash < int(self.config.validation_percentage):
+                    validation_images.append(base_name)
+                elif percentage_hash < (int(self.config.testing_percentage) +
+                                        int(self.config.validation_percentage)):
+                    testing_images.append(base_name)
+                else:
+                    training_images.append(base_name)
+            result[label_name] = {
+                'dir': dir_name,
+                'training': training_images,
+                'testing': testing_images,
+                'validation': validation_images,
+            }
+        return result
 
 def get_files_from_ord_dict(ord_dict, root_dir, subset):
 
@@ -240,158 +389,7 @@ def dset_from_ordered_dict(ord_dict,
     num_samples = len(samples_list)
     return dset, num_samples
 
-def create_file_lists(image_dir, testing_percentage, validation_percentage):
-    """Builds a list of training samples from the file system.
-  
-    Analyzes the sub folders in the image directory, splits them into stable
-    training, testing, and validation sets, and returns a data structure
-    describing the lists of images for each label and their paths.
-  
-    Args:
-      image_dir: String path to a folder containing subfolders of images.
-      testing_percentage: Integer percentage of the images to reserve for tests.
-      validation_percentage: Integer percentage of images reserved for validation.
-  
-    Returns:
-      An OrderedDict containing an entry for each label subfolder, with images
-      split into training, testing, and validation sets within each label.
-      The order of items defines the class indices.
-    """
-    if not tf.gfile.Exists(image_dir):
-        tf.logging.error("Samples root directory '" + image_dir + "' not found.")
-        raise FileNotFoundError
-    result = collections.OrderedDict()
-    sub_dirs = sorted(x[0] for x in tf.gfile.Walk(image_dir))
-    # The root directory comes first, so skip it.
-    is_root_dir = True
-    for sub_dir in sub_dirs:
-        if is_root_dir:
-            is_root_dir = False
-            continue
-        extensions = sorted(set(os.path.normcase(ext)  # Smash case on Windows.
-                              for ext in ['txt', 'TXT', 'PNG', 'png']))
-        file_list = []
-        dir_name = os.path.basename(sub_dir)
-        if dir_name == image_dir:
-            continue
-        tf.logging.info("Looking for samples in '" + dir_name + "'")
-        for extension in extensions:
-            file_glob = os.path.join(image_dir, dir_name, '*.' + extension)
-            file_list.extend(tf.gfile.Glob(file_glob))
-        if not file_list:
-            tf.logging.warning('No files found')
-            continue
-        if len(file_list) < 20:
-            tf.logging.warning(
-                'WARNING: Folder has less than 20 samples, which may cause issues.')
-        elif len(file_list) > MAX_NUM_IMAGES_PER_CLASS:
-            tf.logging.warning(
-                'WARNING: Folder {} has more than {} samples. Some samples will '
-                'never be selected.'.format(dir_name, MAX_NUM_IMAGES_PER_CLASS))
-        label_name = re.sub(r'[^a-z0-9]+', ' ', dir_name.lower())
-        training_images = []
-        testing_images = []
-        validation_images = []
-        for file_name in file_list:
-            base_name = os.path.basename(file_name)
-            # We want to ignore anything after '_nohash_' in the file name when
-            # deciding which set to put an image in, the data set creator has a way of
-            # grouping photos that are close variations of each other. For example
-            # this is used in the plant disease data set to group multiple pictures of
-            # the same leaf.
-            hash_name = re.sub(r'_nohash_.*$', '', file_name)
-            # This looks a bit magical, but we need to decide whether this file should
-            # go into the training, testing, or validation sets, and we want to keep
-            # existing files in the same set even if more files are subsequently
-            # added.
-            # To do that, we need a stable way of deciding based on just the file name
-            # itself, so we do a hash of that and then use that to generate a
-            # probability value that we use to assign it.
-            hash_name_hashed = hashlib.sha1(tf.compat.as_bytes(hash_name)).hexdigest()
-            percentage_hash = ((int(hash_name_hashed, 16) %
-                                (MAX_NUM_IMAGES_PER_CLASS + 1)) *
-                               (100.0 / MAX_NUM_IMAGES_PER_CLASS))
-            if percentage_hash < int(validation_percentage):
-                validation_images.append(base_name)
-            elif percentage_hash < (int(testing_percentage) + int(validation_percentage)):
-                testing_images.append(base_name)
-            else:
-                training_images.append(base_name)
-        result[label_name] = {
-            'dir': dir_name,
-            'training': training_images,
-            'testing': testing_images,
-            'validation': validation_images,
-        }
-    return result
 
-def create_file_lists_from_list(txt_file,
-                                testing_percentage,
-                                validation_percentage,
-                                class_names=None):
-    """Builds a list of training samples from a txt file.
-  
-    It parses the txt file. The txt file contains full paths to files and
-    a class label.  Each line has exactly one (filename, label) pair,
-    seperated by a space. After reading the files list, it splits them into stable
-    training, testing, and validation sets, and returns a data structure
-    describing the lists of images for each label and their paths.
-  
-    Args:
-      image_dir: String path to a txt file containing a list of (filename, label) pairs.
-      testing_percentage: Integer percentage of the images to reserve for tests.
-      validation_percentage: Integer percentage of images reserved for validation.
-  
-    Returns:
-      An OrderedDict containing an entry for each label subfolder, with images
-      split into training, testing, and validation sets within each label.
-      The order of items defines the class indices.
-    """
-    if not tf.gfile.Exists(txt_file):
-        tf.logging.error("File with samples '" + txt_file + "' not found.")
-        raise FileNotFoundError
-    tf.logging.info("Looking for samples in '" + txt_file + "'")
-    file_list, label_list = fileio.parse_imgdb_list(txt_file)
-
-    if class_names != None:
-        assert len(class_names) == len(np.unique(label_list))
-    else:
-        class_names = np.unique(label_list)
-
-    if not file_list:
-        tf.logging.warning('No files found')
-    if len(file_list) < 20:
-        tf.logging.warning(
-            'WARNING: Folder has less than 20 samples, which may cause issues.')
-    elif len(file_list) > MAX_NUM_IMAGES_PER_CLASS:
-        tf.logging.warning(
-            'WARNING: List {} has more than {} samples. Some samples will '
-            'never be selected.'.format(txt_file, MAX_NUM_IMAGES_PER_CLASS))
-
-    result = collections.OrderedDict()
-    for c in range(len(class_names)):
-        result[c] = {
-            'dir': str(class_names[c]),
-            'training': [],
-            'testing': [],
-            'validation': [] }
-
-    for i, file_name in enumerate(file_list):
-        current_label = label_list[i]
-        #base_name = os.path.basename(file_name)
-        nt = (int(len(file_list)) *
-             (1.0 -
-              0.01 * (int(validation_percentage) + int(testing_percentage))))
-        nv = int(0.01 * len(file_list) * int(validation_percentage))
-
-        if i < nt:
-            result[current_label]['training'].append(file_name)
-        elif i >= nt+nv:
-            result[current_label]['testing'].append(file_name)
-        else:
-            result[current_label]['validation'].append(file_name)
-
-    return result
   
 def get_IMGDB_dataset(img_list_filename,
                         subtract_mean=False,
