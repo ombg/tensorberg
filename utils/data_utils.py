@@ -5,6 +5,7 @@ from six.moves import cPickle as pickle
 import numpy as np
 import os
 from imageio import imread
+from skimage.transform import resize
 import platform
 
 from ompy import fileio
@@ -88,7 +89,7 @@ def load_CIFAR10(ROOT):
     Yte = Yte.astype(int)
     return Xtr, Ytr, Xte, Yte
 
-def load_IMGDB(txt_list, img_shape=[32,32,3]):
+def load_IMGDB(txt_list, img_shape=(32,32,3)):
     """
     Load images from the IMGDB image list in txt_list and put them into
     numpy arrays.
@@ -98,11 +99,12 @@ def load_IMGDB(txt_list, img_shape=[32,32,3]):
     num_images = len(image_names)
 
     image_labels = np.asarray(image_labels, dtype=np.int32)
-    image_tensor = np.empty([num_images, *img_shape])
+    image_tensor = np.empty([num_images, *img_shape], dtype=np.float32)
 
     for i in range(num_images):
         try:
-            img = imread(image_names[i])
+            img = imread(image_names[i], pilmode='RGB')
+            img = resize(img, img_shape)
             image_tensor[i] = img
         except ValueError as error:
             print('{}: {}'.format(i,error))
@@ -120,7 +122,7 @@ def load_IMGDB(txt_list, img_shape=[32,32,3]):
 def get_some_data(input_path, 
                   input_path_imgdb_test=None,
                   dataset_name=None,
-                  num_training=49000, num_validation=1000, num_test=10000,
+                  img_shape=(32, 32, 3),
                   subtract_mean=True,
                   normalize_data=False,
                   channels_first=True,
@@ -136,6 +138,10 @@ def get_some_data(input_path,
     # Load the CIFAR-10 dataset
     if dataset_name == 'cifar':
 
+        num_training=49000
+        num_validation=1000
+        num_test=10000
+
         X_train, y_train, X_test, y_test = load_CIFAR10(input_path)
 
         # Subsample the data
@@ -150,15 +156,16 @@ def get_some_data(input_path,
         y_test = y_test[mask]
 
     # Load the IMGDB dataset
-    elif dataset_name == 'imgdb' and input_path_imgdb_test != None:
-        X, y = load_IMGDB(input_path, img_shape=[64, 64, 3])
-        num_training = int(X.shape[0] * 0.773)
-        X_train = X[:num_training]
-        y_train = y[:num_training]
-        X_val = X[num_training:]
-        y_val = y[num_training:]
-
-        X_test, y_test = load_IMGDB(input_path_imgdb_test, img_shape=[64, 64, 3])
+    elif dataset_name == 'imgdb':
+        X, y = load_IMGDB(input_path, img_shape=img_shape)
+        nt = int(X.shape[0] * 0.8)
+        nv = int(X.shape[0] * 0.1)
+        X_train = X[:nt]
+        y_train = y[:nt]
+        X_val = X[nt:nt+nv]
+        y_val = y[nt:nt+nv]
+        X_test = X[nt+nv:]
+        y_test = y[nt+nv:]
     else:
         raise NotImplementedError
 

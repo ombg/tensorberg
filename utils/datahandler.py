@@ -34,6 +34,7 @@ class ImgdbLoader:
         data = data_utils.get_some_data(
             self.config.input_path,
             dataset_name=self.config.dataset_name,
+            img_shape=(224, 224, 3),
             normalize_data=False,
             subtract_mean=False,
             channels_first=False,
@@ -67,7 +68,7 @@ class ImgdbLoader:
             lambda z: tf.one_hot(z, num_classes))
         dset = tf.data.Dataset.zip((dset_x, dset_y))
         dset = dset.shuffle(buffer_size=len(X))
-        dset = dset.repeat().batch(self.config.batch_size)
+        dset = dset.repeat(1).batch(self.config.batch_size)
         return dset
 
 
@@ -317,6 +318,69 @@ def create_file_lists(image_dir, testing_percentage, validation_percentage):
                 training_images.append(base_name)
         result[label_name] = {
             'dir': dir_name,
+            'training': training_images,
+            'testing': testing_images,
+            'validation': validation_images,
+        }
+    return result
+
+def create_file_lists_from_list(txt_file, testing_percentage, validation_percentage):
+    """Builds a list of training samples from a txt file.
+  
+    It parses the txt file. The txt file contains full paths to files and
+    a class label.  Each line has exactly one (filename, label) pair,
+    seperated by a space. After reading the files list, it splits them into stable
+    training, testing, and validation sets, and returns a data structure
+    describing the lists of images for each label and their paths.
+  
+    Args:
+      image_dir: String path to a txt file containing a list of (filename, label) pairs.
+      testing_percentage: Integer percentage of the images to reserve for tests.
+      validation_percentage: Integer percentage of images reserved for validation.
+  
+    Returns:
+      An OrderedDict containing an entry for each label subfolder, with images
+      split into training, testing, and validation sets within each label.
+      The order of items defines the class indices.
+    """
+    if not tf.gfile.Exists(txt_file):
+        tf.logging.error("Samples root directory '" + txt_file + "' not found.")
+        raise FileNotFoundError
+    result = collections.OrderedDict()
+    tf.logging.info("Looking for samples in '" + txt_file + "'")
+    file_list, label_list = fileio.parse_imgdb_list(txt_file)
+    if not file_list:
+        tf.logging.warning('No files found')
+        continue
+    if len(file_list) < 20:
+        tf.logging.warning(
+            'WARNING: Folder has less than 20 samples, which may cause issues.')
+    elif len(file_list) > MAX_NUM_IMAGES_PER_CLASS:
+        tf.logging.warning(
+            'WARNING: List {} has more than {} samples. Some samples will '
+            'never be selected.'.format(txt_file, MAX_NUM_IMAGES_PER_CLASS))
+    training_images = []
+    testing_images = []
+    validation_images = []
+    for i, file_name in enumerate(file_list):
+        #base_name = os.path.basename(file_name)
+        nt = int(len(file_list) * (1.0 - int(validation_percentage) - int(testing_percentage)) 
+        nv = int(len(file_list) * int(validation_percentage))
+        X_train = X[:nt]
+        y_train = y[:nt]
+        X_val = X[nt:nt+nv]
+        y_val = y[nt:nt+nv]
+        X_test = X[nt+nv:]
+        y_test = y[nt+nv:]
+        if i < nt:
+            training_images.append(file_name)
+        elif i >= nt+nv:
+            testing_images.append(file_name)
+        else:
+            validation_images.append(file_name)
+        # TODO Storage does not work like this.
+        result[int(label_list[i])] = {
+            'dir': label_name[int(label_list[i])],
             'training': training_images,
             'testing': testing_images,
             'validation': validation_images,
