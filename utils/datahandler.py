@@ -143,28 +143,6 @@ class AbstractDatasetLoader(ABC):
 
         self.num_batches = self.num_samples // self.config.batch_size
 
-    def get_bottleneck_filenames(self, root_dir, subset):
-    
-        samples_list = []
-        labels_list = []
-    
-        for label, value in self.image_lists.items():
-            samples_subset = self.image_lists[label][subset]
-    
-            os.makedirs(os.path.join(root_dir, self.image_lists[label]['dir']),
-                        exist_ok=True)
-
-            # Prepend full path to every file name in the subset
-            # Replace image file extension with bottleneck file extension
-            samples_subset = [os.path.join(root_dir,
-                                           self.image_lists[label]['dir'],
-                                           os.path.splitext(os.path.basename(sample))[0] + '.txt')
-                                 for sample in samples_subset]
-    
-            samples_list += samples_subset
-    
-        return samples_list
-
     def initialize_train(self, sess):
         sess.run(self.training_init_op)
     def initialize_val(self, sess):
@@ -176,6 +154,10 @@ class AbstractDatasetLoader(ABC):
 
     @abstractmethod
     def create_file_lists():
+        pass
+
+    @abstractmethod
+    def get_bottleneck_filenames():
         pass
 
 class FileListDatasetLoader(AbstractDatasetLoader):
@@ -245,6 +227,35 @@ class FileListDatasetLoader(AbstractDatasetLoader):
                 result[current_label]['validation'].append(file_name)
     
         return result
+
+    def get_bottleneck_filenames(self, root_dir, subset):
+    
+        def _get_long_file_name(sample, new_file_ext):
+            file_name = os.path.basename(sample)
+            prefix = os.path.basename(os.path.dirname(sample))
+            long_file_name = prefix + '_' +  file_name
+            long_file_name = os.path.splitext(long_file_name)[0] + new_file_ext
+            return long_file_name
+
+        samples_list = []
+        labels_list = []
+    
+        for label, value in self.image_lists.items():
+            samples_subset = self.image_lists[label][subset]
+    
+            os.makedirs(os.path.join(root_dir, self.image_lists[label]['dir']),
+                        exist_ok=True)
+
+            # Prepend full path to every file name in the subset
+            # Replace image file extension with bottleneck file extension
+            samples_subset = [os.path.join(root_dir,
+                                           self.image_lists[label]['dir'],
+                                           _get_long_file_name(sample, '.txt'))
+                                 for sample in samples_subset]
+    
+            samples_list += samples_subset
+    
+        return samples_list
 
 class DirectoryDatasetLoader(AbstractDatasetLoader):
 
@@ -328,6 +339,28 @@ class DirectoryDatasetLoader(AbstractDatasetLoader):
                 'validation': validation_images,
             }
         return result
+
+    def get_bottleneck_filenames(self, root_dir, subset):
+    
+        samples_list = []
+        labels_list = []
+    
+        for label, value in self.image_lists.items():
+            samples_subset = self.image_lists[label][subset]
+    
+            os.makedirs(os.path.join(root_dir, self.image_lists[label]['dir']),
+                        exist_ok=True)
+
+            # Prepend full path to every file name in the subset
+            # Replace image file extension with bottleneck file extension
+            samples_subset = [os.path.join(root_dir,
+                                           self.image_lists[label]['dir'],
+                                           os.path.splitext(sample)[0] + '.txt')
+                                 for sample in samples_subset]
+    
+            samples_list += samples_subset
+    
+        return samples_list
 
 def get_files_from_ord_dict(ord_dict, root_dir, subset):
 
