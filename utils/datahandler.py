@@ -95,6 +95,7 @@ class AbstractDatasetLoader(ABC):
 
         self.image_lists = self.create_file_lists()
 
+    def load_datasets(self):
         self.train_dataset, self.num_samples = dset_from_ordered_dict(
                                                     self.image_lists,
                                                     config.input_path,
@@ -180,13 +181,14 @@ class FileListDatasetLoader(AbstractDatasetLoader):
             raise FileNotFoundError
         tf.logging.info("Looking for samples in '" + self.config.input_path + "'")
         file_list, label_list = fileio.parse_imgdb_list(self.config.input_path)
-    
+        
         try:
-            #_class_names = __import__('crowdnet_classes', fromlist=['class_names'])
-            __import__(class_names, fromlist=[crowdnet_classes])
+            class_names = __import__('crowdnet_classes', fromlist=['class_names'])
+            class_names = class_names.class_names
+            #__import__(class_names, fromlist=[crowdnet_classes])
         except ImportError:
             tf.logging.warning('No class names have been found. Using a simple counter')
-            class_names = np.unique(label_list)
+            class_names = list(np.unique(label_list))
         else:
             assert len(class_names) == len(np.unique(label_list))
     

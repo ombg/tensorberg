@@ -41,6 +41,8 @@ def main():
                                 is_png=True,
                                 train_repetitions=1)
 
+    image_data.load_datasets()
+
     # create instance of the model 
     model = Vgg16(config, data_loader=image_data)
 

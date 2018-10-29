@@ -1,23 +1,44 @@
 import unittest
-import datahandler
+from datahandler import FileListDatasetLoader
+import config
 import testdata
 
-class DataHandlerTestCase(unittest.TestCase):
+class FileListDatasetLoaderTestCase(unittest.TestCase):
     def setUp(self):
-        self.txt_file = 'testing.txt'
-        self.class_names = { 0: 'no_crowd',
-                             1: 'sparse',
-                             2: 'medium_dense',
-                             3: 'dense' }
+        import json
+        testcase_config_filename = '/tmp/testcase_config.json'
+        testcase_config = {
+            "input_path": "testing.txt",
+            "testset_list_path": "/tmp/cl_0123_ps_xx_dr_01_sam_200_testset.txt",
+            "testing_percentage": "10",
+            "validation_percentage": "10",
+            "weights_file": "/tmp/vgg16_weights.npz",
+            "dataset_name": "imgdb",
+            "exp_name": "imgdb_vgg16_fc2_4096_cl4_dr_0.1",
+            "checkpoint_to_restore": "dummy",
+            "num_epochs": 1,
+            "learning_rate": 0.001,
+            "batch_size": 1,
+            "max_to_keep":5
+        }
+        with open(testcase_config_filename, 'w') as f:
+            json.dump(testcase_config, f)
+        testcase_config_reloaded = config.process_config(testcase_config_filename)
+        self.dsetsloader = FileListDatasetLoader(testcase_config_reloaded,
+                                           do_shuffle=False,
+                                           is_png=True,
+                                           train_repetitions=1)
         
-    def test_create_file_lists_from_list(self):
+    def test_create_file_lists(self):
         self.assertDictEqual(
-            datahandler.create_file_lists_from_list(
-                self.txt_file,
-                10,
-                10,
-                class_names=self.class_names), 
+            self.dsetsloader.image_lists,
             testdata.gold_result)
+
+    def tearDown(self):
+        with open('/tmp/test_dump.txt', 'w') as f:
+            f.write('{}'.format(self.dsetsloader.image_lists))
+            f.write('\n\nGoldresult\n\n')
+            f.write('{}'.format(testdata.gold_result))
 
 if __name__ == '__main__':
     unittest.main()
