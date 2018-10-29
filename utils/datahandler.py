@@ -11,8 +11,7 @@ This class will contain different loaders for cifar 100 dataset
 
 Supports IMGDB4 and CIFAR dataset
 """
-import data_utils, dirs
-#from utils import data_utils, dirs
+from utils import data_utils, dirs
 from ompy import fileio
 
 from abc import ABC, abstractmethod
@@ -84,42 +83,40 @@ class ImgdbLoader:
         return self.iterator.get_next()
 
 class AbstractDatasetLoader(ABC):
-    def __init__(self,
-                 config,
-                 do_shuffle=True,
-                 is_png=True,
-                 train_repetitions=-1):
+    def __init__(self, config):
 
-        print('Loading data...')
         self.config = config
 
         self.image_lists = self.create_file_lists()
 
-    def load_datasets(self):
+    def load_datasets(self,do_shuffle=True, is_png=True, train_repetitions=-1):
+
         self.train_dataset, self.num_samples = dset_from_ordered_dict(
                                                     self.image_lists,
-                                                    config.input_path,
+                                                    self.config.input_path,
                                                     subset='training',
                                                     batch_size=self.config.batch_size,
                                                     do_shuffle=do_shuffle,
                                                     is_png=is_png,
                                                     repetitions=train_repetitions)
+
         if int(self.config.validation_percentage) > 0:
             self.val_dataset, _ = dset_from_ordered_dict(
                                       self.image_lists, 
-                                      config.input_path,
+                                      self.config.input_path,
                                       subset='validation',
                                       batch_size=self.config.batch_size,
                                       do_shuffle=do_shuffle,
                                       is_png=is_png,
                                       repetitions=train_repetitions)
+
         if int(self.config.testing_percentage) > 0:
 
             # Save test set for later
             if self.config.testset_list_path != None:
                 images, labels = get_files_from_ord_dict(
                                      self.image_lists,
-                                     config.input_path,
+                                     self.config.input_path,
                                      subset='testing')
 
                 testset_list = ['{} {}\n'.format(a[0], a[1]) for a in zip(images, labels)]
@@ -127,7 +124,7 @@ class AbstractDatasetLoader(ABC):
 
             self.test_dataset, _ = dset_from_ordered_dict(
                                        self.image_lists, 
-                                       config.input_path,
+                                       self.config.input_path,
                                        subset='testing',
                                        batch_size=self.config.batch_size,
                                        do_shuffle=do_shuffle,
@@ -146,9 +143,27 @@ class AbstractDatasetLoader(ABC):
 
         self.num_batches = self.num_samples // self.config.batch_size
 
-    @abstractmethod
-    def create_file_lists():
-        pass
+    def get_bottleneck_filenames(self, root_dir, subset):
+    
+        samples_list = []
+        labels_list = []
+    
+        for label, value in self.image_lists.items():
+            samples_subset = self.image_lists[label][subset]
+    
+            os.makedirs(os.path.join(root_dir, self.image_lists[label]['dir']),
+                        exist_ok=True)
+
+            # Prepend full path to every file name in the subset
+            # Replace image file extension with bottleneck file extension
+            samples_subset = [os.path.join(root_dir,
+                                           self.image_lists[label]['dir'],
+                                           os.path.splitext(os.path.basename(sample))[0] + '.txt')
+                                 for sample in samples_subset]
+    
+            samples_list += samples_subset
+    
+        return samples_list
 
     def initialize_train(self, sess):
         sess.run(self.training_init_op)
@@ -159,6 +174,9 @@ class AbstractDatasetLoader(ABC):
     def get_input(self):
         return self.iterator.get_next()
 
+    @abstractmethod
+    def create_file_lists():
+        pass
 
 class FileListDatasetLoader(AbstractDatasetLoader):
 
@@ -183,7 +201,7 @@ class FileListDatasetLoader(AbstractDatasetLoader):
         file_list, label_list = fileio.parse_imgdb_list(self.config.input_path)
         
         try:
-            class_names = __import__('crowdnet_classes', fromlist=['class_names'])
+            class_names = __import__('utils.crowdnet_classes', fromlist=['class_names'])
             class_names = class_names.class_names
             #__import__(class_names, fromlist=[crowdnet_classes])
         except ImportError:
@@ -254,7 +272,7 @@ class DirectoryDatasetLoader(AbstractDatasetLoader):
                 is_root_dir = False
                 continue
             extensions = sorted(set(os.path.normcase(ext)  # Smash case on Windows.
-                                  for ext in ['txt', 'TXT', 'PNG', 'png']))
+                                  for ext in ['txt', 'TXT', 'PNG', 'png', 'JPG', 'jpg']))
             file_list = []
             dir_name = os.path.basename(sub_dir)
             if dir_name == self.config.input_path:
@@ -329,26 +347,6 @@ def get_files_from_ord_dict(ord_dict, root_dir, subset):
         label_number += 1
 
     return samples_list, labels_list
-
-def get_bottlenecks_from_ord_dict(ord_dict, root_dir, subset):
-
-    samples_list = []
-    labels_list = []
-
-    for label, value in ord_dict.items():
-        samples_subset = ord_dict[label][subset]
-
-        os.makedirs(os.path.join(root_dir, ord_dict[label]['dir']), exist_ok=True)
-        # Prepend full path to every file name in the subset
-        # Replace image file extension with bottleneck file extension
-        samples_subset = [os.path.join(root_dir,
-                                       ord_dict[label]['dir'],
-                                       os.path.splitext(sample)[0] + '.txt')
-                             for sample in samples_subset]
-
-        samples_list += samples_subset
-
-    return samples_list
 
 def dset_from_ordered_dict(ord_dict,
                            root_dir,

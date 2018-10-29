@@ -1,10 +1,11 @@
 {
-    "input_path":"/home/oliver/data/heads/processed/databases_cl_4_dr_0.1/cl_0123_ps_xx_dr_01_sam_200.txt",
+    "input_path":"/home/oliver/data/heads/processed/databases_cl_4_dr_0.1/cl_0123_ps_xx_dr_01_sam_500.txt",
     "testset_list_path":"/home/oliver/data/heads/processed/databases_cl_4_dr_0.1/cl_0123_ps_xx_dr_01_sam_200_testset.txt",
     "testing_percentage": "10",
     "validation_percentage": "10",
     "weights_file": "/tmp/vgg16_weights.npz",
     "dataset_name": "imgdb",
+    "work_dir": "/home/oliver/projects/crowdnet/tensorberg/no_sync/experiments/",
     "exp_name": "imgdb_vgg16_fc2_4096_cl4_dr_0.1",
     "checkpoint_to_restore": "dummy",
     "num_epochs": 1,

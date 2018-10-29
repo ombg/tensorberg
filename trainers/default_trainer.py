@@ -144,10 +144,9 @@ class Trainer:
             raise NotImplementedError
 
         try:
-            bottleneck_paths = datahandler.get_bottlenecks_from_ord_dict(
-                                              self.data_loader.image_lists,
-                                              self.config.bottleneck_dir,   
-                                              subset=subset)
+            bottleneck_paths = self.data_loader.get_bottleneck_filenames(
+                                                    self.config.bottleneck_dir,   
+                                                    subset=subset)
 
             for bn_path in tqdm(bottleneck_paths,ascii=True, desc='bottlenecks'):
                 # Specify bottleneck layer here:

@@ -21,8 +21,8 @@ def get_config_from_json(json_file):
 
 def process_config(json_file):
     config, _ = get_config_from_json(json_file)
-    config.summary_dir = os.path.join("../no_sync/experiments", config.exp_name, "summaries/")
-    config.checkpoint_dir = os.path.join("../no_sync/experiments", config.exp_name, "checkpoints/")
-    config.checkpoint_dir_restore = config.checkpoint_dir + config.checkpoint_to_restore
-    config.bottleneck_dir = os.path.join("../no_sync/experiments", config.exp_name, "bottlenecks/")
+    config.summary_dir = os.path.join(config.work_dir, config.exp_name, "summaries/")
+    config.checkpoint_dir = os.path.join(config.work_dir, config.exp_name, "checkpoints/")
+    config.checkpoint_dir_restore = os.path.join(config.work_dir, config.checkpoint_to_restore)
+    config.bottleneck_dir = os.path.join(config.work_dir, config.exp_name, "bottlenecks/")
     return config

@@ -1,4 +1,5 @@
 import sys
+import pprint
 
 sys.path.extend(['..'])
 
@@ -7,8 +8,7 @@ import tensorflow as tf
 from models.vggnet import Vgg16
 from trainers.default_trainer import Trainer
 
-#from utils.datahandler import ImgdbLoader
-from utils.datahandler import ImageDirLoader
+from utils.datahandler import FileListDatasetLoader
 from utils.config import process_config
 from utils.dirs import create_dirs
 from utils.utils import get_args
@@ -27,7 +27,7 @@ def main():
         tf.logging.info(pprint.pprint(config))
     except Exception as e:
         print("missing or invalid arguments %s" % e)
-        exit(0)
+        raise SystemExit
 
     # create the experiments dirs
     create_dirs([config.bottleneck_dir, config.summary_dir, config.checkpoint_dir])
@@ -36,12 +36,11 @@ def main():
     sess = tf.Session()
 
     # Loads data into a tf.dataset
-    image_data = ImageDirLoader(config,
-                                do_shuffle=True,
-                                is_png=True,
-                                train_repetitions=1)
+    image_data = FileListDatasetLoader(config)
 
-    image_data.load_datasets()
+    image_data.load_datasets(do_shuffle=False,
+                             is_png=True,
+                             train_repetitions=1)
 
     # create instance of the model 
     model = Vgg16(config, data_loader=image_data)
