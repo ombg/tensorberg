@@ -15,6 +15,7 @@ class FileListDatasetLoaderTestCase(unittest.TestCase):
             "weights_file": "/tmp/vgg16_weights.npz",
             "dataset_name": "imgdb",
             "exp_name": "imgdb_vgg16_fc2_4096_cl4_dr_0.1",
+            "work_dir": "dummy",
             "checkpoint_to_restore": "dummy",
             "num_epochs": 1,
             "learning_rate": 0.001,
@@ -24,10 +25,7 @@ class FileListDatasetLoaderTestCase(unittest.TestCase):
         with open(testcase_config_filename, 'w') as f:
             json.dump(testcase_config, f)
         testcase_config_reloaded = config.process_config(testcase_config_filename)
-        self.dsetsloader = FileListDatasetLoader(testcase_config_reloaded,
-                                           do_shuffle=False,
-                                           is_png=True,
-                                           train_repetitions=1)
+        self.dsetsloader = FileListDatasetLoader(testcase_config_reloaded)
         
     def test_create_file_lists(self):
         self.assertDictEqual(

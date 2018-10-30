@@ -179,6 +179,7 @@ class FileListDatasetLoader(AbstractDatasetLoader):
         if not tf.gfile.Exists(self.config.input_path):
             tf.logging.error("File with samples '" + self.config.input_path + "' not found.")
             raise FileNotFoundError
+        assert os.path.isfile(self.config.input_path)
         tf.logging.info("Looking for samples in '" + self.config.input_path + "'")
         file_list, label_list = fileio.parse_imgdb_list(self.config.input_path)
         
@@ -274,6 +275,7 @@ class DirectoryDatasetLoader(AbstractDatasetLoader):
         if not tf.gfile.Exists(self.config.input_path):
             tf.logging.error("Samples root directory '" + self.config.input_path + "' not found.")
             raise FileNotFoundError
+        assert os.path.isdir(self.config.input_path)
         result = collections.OrderedDict()
         sub_dirs = sorted(x[0] for x in tf.gfile.Walk(self.config.input_path))
         # The root directory comes first, so skip it.
@@ -416,7 +418,8 @@ def dset_from_ordered_dict(ord_dict,
 
     dset = tf.data.Dataset.zip((dset_x, dset_y))
     if do_shuffle:
-        dset = dset.shuffle(buffer_size=len(samples_list))
+        #dset = dset.shuffle()
+        pass
 
     dset = dset.repeat(repetitions).batch(batch_size)
     num_samples = len(samples_list)

@@ -65,8 +65,14 @@ class FullyConnectedNet:
             data_loss = tf.reduce_mean(cross_entropy)
             reg_loss = tf.losses.get_regularization_loss()
             self.loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
-            correct_prediction = tf.equal(tf.argmax(self.fc3l, 1), tf.argmax(self.labels, 1))
-            self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            pred = tf.argmax(self.fc3l, axis=1)
+            lbl  = tf.argmax(self.labels, axis=1)
+            self.cm = tf.confusion_matrix(lbl, pred)
+            is_correct = tf.equal(pred, lbl)
+            self.accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
+            softmax = tf.nn.softmax(self.fc3l)
+            tf.summary.histogram('softmax', softmax)
+            tf.summary.histogram('fc3logits', self.fc3l)
             tf.summary.scalar('total_loss', self.loss)
             tf.summary.scalar('accuracy', self.accuracy)
 
@@ -75,5 +81,3 @@ class FullyConnectedNet:
             self.optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
             self.train_step = self.optimizer.minimize(self.loss, global_step=global_step)
 
-        with tf.name_scope('test'):
-            self.softmax = tf.nn.softmax(self.fc3l)

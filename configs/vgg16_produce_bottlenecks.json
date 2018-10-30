@@ -1,6 +1,6 @@
 {
     "input_path":"/home/oliver/data/heads/processed/databases_cl_4_dr_0.1/cl_0123_ps_xx_dr_01_sam_500.txt",
-    "testset_list_path":"/home/oliver/data/heads/processed/databases_cl_4_dr_0.1/cl_0123_ps_xx_dr_01_sam_200_testset.txt",
+    "testset_list_path":"/home/oliver/data/heads/processed/databases_cl_4_dr_0.1/cl_0123_ps_xx_dr_01_sam_500_testset.txt",
     "testing_percentage": "10",
     "validation_percentage": "10",
     "weights_file": "/tmp/vgg16_weights.npz",
