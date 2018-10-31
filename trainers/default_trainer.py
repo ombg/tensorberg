@@ -102,6 +102,8 @@ class Trainer:
         # Load test dataset
         self.data_loader.initialize_test(self.sess)
         accuracies = []
+        num_classes = int(self.data_loader.test_dataset.output_shapes[1][1])
+        confusion_matrix = np.zeros((num_classes, num_classes),dtype=int)
         try:
             while True:
                 fetches = [self.model.cm, self.model.accuracy]
@@ -109,13 +111,14 @@ class Trainer:
                 cm, acc = self.sess.run(fetches)
                 tf.logging.info('Per batch average test_acc: {:5.2f}%'.format(acc * 100.0))
                 accuracies.append(acc)
-                print(cm)
+                confusion_matrix += cm
         except tf.errors.OutOfRangeError:
             pass
         accuracies = np.asarray(accuracies)
-        tf.logging.info('Average accuracy of batch accuracies: {} (std: {})'.format(
-                            np.mean(accuracies),
+        tf.logging.info('Average accuracy of batch accuracies: {:5.2f}% (std: {})'.format(
+                            np.mean(accuracies) * 100.0,
                             np.std(accuracies)))
+        tf.logging.info('Confusion matrix:\n{}'.format(confusion_matrix))
 
     def predict(self, image_path, num_images=1):
 

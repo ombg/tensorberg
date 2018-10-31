@@ -40,9 +40,9 @@ def main():
     # Trainer loops over the data using the model
     trainer = Trainer(sess, model, config, data_loader=bottlenecks_loader)
 
-    #trainer.train()
-    trainer.test(config.checkpoint_dir_restore)
-    #trainer.test()
+    trainer.train()
+    #trainer.test(config.checkpoint_dir_restore)
+    trainer.test()
     tf.logging.info('==== Configuration ====')
     tf.logging.info(pprint.pprint(config))
 
