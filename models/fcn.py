@@ -1,8 +1,9 @@
+from abc import ABC, abstractmethod
 import tensorflow as tf
 
 from models import layers
 
-class FullyConnectedNet:
+class AbstractNet(ABC):
     def __init__(self, config, data_loader=None):
         self.config = config
 
@@ -31,19 +32,9 @@ class FullyConnectedNet:
        self.optimize
        self.accuracy
 
-    @property
+    @abstractmethod
     def prediction(self):
-        if self._prediction == None:
-            # fc3
-            fc3l, fc3w, fc3b = layers.fc(self.data,
-                                         num_in=4096,
-                                         num_out=4,
-                                         name='output_layer',
-                                         relu=False)
-            self.parameters += [fc3w, fc3b]
-            self._prediction = fc3l
-            tf.summary.histogram('fc3logits', fc3l)
-        return self._prediction
+        pass
 
     @property
     def loss(self):
@@ -97,3 +88,18 @@ class FullyConnectedNet:
         keys = sorted(weights.keys())
         for i, k in enumerate(keys):
             sess.run(self.parameters[i].assign(weights[k]))
+
+class FullyConnectedNet(AbstractNet):
+    @property
+    def prediction(self):
+        if self._prediction == None:
+            # fc3
+            fc3l, fc3w, fc3b = layers.fc(self.data,
+                                         num_in=4096,
+                                         num_out=4,
+                                         name='output_layer',
+                                         relu=False)
+            self.parameters += [fc3w, fc3b]
+            self._prediction = fc3l
+            tf.summary.histogram('fc3logits', fc3l)
+        return self._prediction

@@ -34,8 +34,8 @@ class Trainer:
         if self.data_loader == None:
             raise RuntimeError
 
-        run_id = np.random.randint(1e6,size=1)[0]
-        tf.logging.info('run_id: {}'.format(run_id))
+        train_id = np.random.randint(1e6,size=1)[0]
+        tf.logging.info('train_id: {}'.format(train_id))
         tf.logging.info('Initializing data...')
         
         global_step = tf.train.get_or_create_global_step()
@@ -43,9 +43,9 @@ class Trainer:
         saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
         # File writers for TensorBoard
         train_writer = tf.summary.FileWriter( 
-            self.config.summary_dir + 'run_' + str(run_id) + '/train', self.sess.graph)
+            self.config.summary_dir + 'run_' + str(train_id) + '/train', self.sess.graph)
         val_writer = tf.summary.FileWriter( 
-            self.config.summary_dir + 'run_' + str(run_id) + '/val', self.sess.graph)
+            self.config.summary_dir + 'run_' + str(train_id) + '/val', self.sess.graph)
     
         tf.logging.info('Training for {} epochs...'.format(self.config.num_epochs))
         for i in range(self.config.num_epochs):
@@ -83,7 +83,7 @@ class Trainer:
             val_writer.add_summary(summary_val, global_step=global_step_vl)
             val_writer.flush()
 
-        save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(run_id))
+        save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
         tf.logging.info('Model checkpoint saved to %s' % save_path)
     
         train_writer.close()
