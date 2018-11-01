@@ -24,8 +24,9 @@ class Trainer:
         self.sess = sess
         self.data_loader = data_loader
 
-        self.write_op = tf.summary.merge_all()
         # Initialize all variables of the graph
+        self.model.build_graph()
+        self.write_op = tf.summary.merge_all()
         self.init = tf.global_variables_initializer()
         self.sess.run(self.init)
 
@@ -54,10 +55,10 @@ class Trainer:
             
             #Do not monitor, just train for one epoch
             for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
-                self.sess.run(self.model.train_step)
+                self.sess.run(self.model.optimize)
     
             # Monitor the training after every epoch
-            fetches = [self.model.train_step,
+            fetches = [self.model.optimize,
                        self.model.loss,
                        self.model.accuracy,
                        self.write_op,
@@ -121,7 +122,8 @@ class Trainer:
         tf.logging.info('Confusion matrix:\n{}'.format(confusion_matrix))
 
     def predict(self, image_path, num_images=1):
-
+        raise NotImplementedError
+        #TODO
         if num_images == 1:
             img1 = imread(image_path, mode='RGB')
             img1 = imresize(img1, (224, 224))
@@ -156,7 +158,7 @@ class Trainer:
 
             for bn_path in tqdm(bottleneck_paths,ascii=True, desc='bottlenecks'):
                 # Specify bottleneck layer here:
-                fetches = [self.model.fc2]
+                fetches = [self.model.prediction]
                 #Get bottleneck feature vector for an image
                 bottleneck_values = self.sess.run(fetches)[0]
                 bottleneck_string = ','.join(str(x) for x in bottleneck_values.squeeze())

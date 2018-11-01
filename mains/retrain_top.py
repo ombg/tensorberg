@@ -37,6 +37,10 @@ def main():
     # create instance of the model 
     model = FullyConnectedNet(config, data_loader=bottlenecks_loader)
 
+    # TODO There is a fancy way to get rid of this using decorators:
+    # https://danijar.com/structuring-your-tensorflow-models/
+    model.build_graph()
+
     # Trainer loops over the data using the model
     trainer = Trainer(sess, model, config, data_loader=bottlenecks_loader)
 
