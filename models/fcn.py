@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+from models import layers
+
 class FullyConnectedNet:
     def __init__(self, config, data_loader=None):
 
@@ -44,18 +46,12 @@ class FullyConnectedNet:
         """
 
         # fc3
-        with tf.variable_scope('fc3') as scope:
-            fc3w = tf.get_variable(name='weights',
-                                   shape=[4096, 4],
-                                   initializer=tf.glorot_uniform_initializer(),
-                                   regularizer=tf.nn.l2_loss,
-                                   trainable=True)
-            fc3b = tf.get_variable(name='biases',
-                                   shape=[4],
-                                   initializer=tf.zeros_initializer(),
-                                   trainable=True)
-            self.fc3l = tf.nn.bias_add(tf.matmul(self.bottlenecks, fc3w), fc3b)
-            self.parameters += [fc3w, fc3b]
+        self.fc3l, fc3w, fc3b = layers.fc(self.bottlenecks,
+                                          num_in=4096,
+                                          num_out=4,
+                                          name='output_layer',
+                                          relu=False)
+        self.parameters += [fc3w, fc3b]
 
         # Compute data loss and regularization loss
         with tf.name_scope('loss'):
