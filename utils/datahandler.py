@@ -111,17 +111,6 @@ class AbstractDatasetLoader(ABC):
                                       repetitions=train_repetitions)
 
         if int(self.config.testing_percentage) > 0:
-
-            # Save test set for later
-            if self.config.testset_list_path != None:
-                images, labels = get_files_from_ord_dict(
-                                     self.image_lists,
-                                     self.config.input_path,
-                                     subset='testing')
-
-                testset_list = ['{} {}\n'.format(a[0], a[1]) for a in zip(images, labels)]
-                fileio.write_txt_file(self.config.testset_list_path, testset_list)
-
             self.test_dataset, _ = dset_from_ordered_dict(
                                        self.image_lists, 
                                        self.config.input_path,
@@ -399,12 +388,13 @@ def dset_from_ordered_dict(ord_dict,
         #TODO warn if values do not return constant number of bottleneck features
         raw_values = tf.string_split([raw_string], delimiter=',').values
         float_values = tf.strings.to_number(raw_values, out_type=tf.float32)
+        float_values.set_shape([2048])
         return float_values
 
     def _parse_png(filename):
         image_string = tf.read_file(filename)
         image_decoded = tf.image.decode_png(image_string, channels=3)
-        image_resized = tf.image.resize_images(image_decoded, [224, 224])
+        image_resized = tf.image.resize_images(image_decoded, [64, 64])
         return image_resized
 
     samples_list, labels_list = get_files_from_ord_dict(ord_dict, root_dir, subset)

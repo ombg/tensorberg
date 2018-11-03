@@ -32,7 +32,8 @@ class Vgg16:
         weights = np.load(weight_file)
         keys = sorted(weights.keys())
         for i, k in enumerate(keys):
-            sess.run(self.parameters[i].assign(weights[k]))
+            if k.startswith('conv'):
+                sess.run(self.parameters[i].assign(weights[k]))
 
     def build_model(self):
 
@@ -300,6 +301,7 @@ class Vgg16:
         # fc1
         with tf.variable_scope('fc1') as scope:
             shape = int(np.prod(self.pool5.get_shape()[1:]))
+            tf.logging.info('pool5_flat shape: {}'.format(shape))
             fc1w = tf.get_variable(name='weights',
                                    shape=[shape, 4096],
                                    initializer=tf.glorot_uniform_initializer(),
@@ -310,6 +312,7 @@ class Vgg16:
                                    initializer=tf.zeros_initializer(),
                                    trainable=True)
             pool5_flat = tf.reshape(self.pool5, [-1, shape])
+            self.bottlenecks = pool5_flat
             fc1l = tf.nn.bias_add(tf.matmul(pool5_flat, fc1w), fc1b)
             self.fc1 = tf.nn.relu(fc1l)
             self.parameters += [fc1w, fc1b]
@@ -358,8 +361,8 @@ class Vgg16:
 
         with tf.name_scope('train_step'):
             global_step=tf.train.get_or_create_global_step()
-            self.optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
-            self.train_step = self.optimizer.minimize(self.loss, global_step=global_step)
+            optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
+            self.optimize = optimizer.minimize(self.loss, global_step=global_step)
 
         with tf.name_scope('test'):
             self.softmax = tf.nn.softmax(self.fc3l)

@@ -25,7 +25,6 @@ class Trainer:
         self.data_loader = data_loader
 
         # Initialize all variables of the graph
-        self.model.build_graph()
         self.write_op = tf.summary.merge_all()
         self.init = tf.global_variables_initializer()
         self.sess.run(self.init)
@@ -47,14 +46,19 @@ class Trainer:
         val_writer = tf.summary.FileWriter( 
             self.config.summary_dir + 'run_' + str(train_id) + '/val', self.sess.graph)
     
+        #first_run = True
         tf.logging.info('Training for {} epochs...'.format(self.config.num_epochs))
         for i in range(self.config.num_epochs):
             tf.logging.info('===== EPOCH {} ====='.format(i))
             # Initialize iterator with training data
             self.data_loader.initialize_train(self.sess)
-            
             #Do not monitor, just train for one epoch
             for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
+
+#                if first_run:
+#                    _, data_batch = self.sess.run([self.model.optimize, self.model.data])
+#                    first_run = False
+#                    np.save('/tmp/data_batch_0.npy', data_batch)
                 self.sess.run(self.model.optimize)
     
             # Monitor the training after every epoch
@@ -158,7 +162,7 @@ class Trainer:
 
             for bn_path in tqdm(bottleneck_paths,ascii=True, desc='bottlenecks'):
                 # Specify bottleneck layer here:
-                fetches = [self.model.prediction]
+                fetches = [self.model.bottlenecks]
                 #Get bottleneck feature vector for an image
                 bottleneck_values = self.sess.run(fetches)[0]
                 bottleneck_string = ','.join(str(x) for x in bottleneck_values.squeeze())

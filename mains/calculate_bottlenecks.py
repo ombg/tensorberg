@@ -20,7 +20,6 @@ def main():
     try:
         args = get_args()
         config = process_config(args.config)
-        config.testset_list_path = None
         tf.logging.info('==== Configuration ====')
         tf.logging.info(pprint.pprint(config))
     except Exception as e:
@@ -51,9 +50,10 @@ def main():
     trainer.create_bottlenecks(subset='training')
     trainer.create_bottlenecks(subset='validation')
     
+    tf.logging.info('==== Configuration ====')
+    tf.logging.info(pprint.pprint(config))
+
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
     main()
-    tf.logging.info('==== Configuration ====')
-    tf.logging.info(pprint.pprint(config))
     print("Done!")

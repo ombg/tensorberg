@@ -1,11 +1,11 @@
 import tensorflow as tf
 
-def fc(x, num_in, num_out, name, relu=True):
+def fc(x, num_in, units, name, relu=True):
     """Create a fully connected layer.
     Args:
         x: A `Tensor`. It holds the input samples.
         num_in: An integer. It specifies the dimensionality of the input
-        units: An integer. It specifies the dimensionality of the output space.
+        units: An integer. It specifies the dimensionality of the output
     Returns:
     Output tensor the same shape as `x` except the last dimension is of size `units`.    
     """
@@ -13,12 +13,12 @@ def fc(x, num_in, num_out, name, relu=True):
 
         # Create tf variables for the weights and biases
         weights = tf.get_variable(name='weights',
-                               shape=[num_in, num_out],
+                               shape=[num_in, units],
                                initializer=tf.glorot_uniform_initializer(),
                                regularizer=tf.nn.l2_loss,
                                trainable=True)
         biases = tf.get_variable(name='biases',
-                               shape=[num_out],
+                               shape=[units],
                                initializer=tf.zeros_initializer(),
                                trainable=True)
 

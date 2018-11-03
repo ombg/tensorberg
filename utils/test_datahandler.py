@@ -9,7 +9,6 @@ class FileListDatasetLoaderTestCase(unittest.TestCase):
         testcase_config_filename = '/tmp/testcase_config.json'
         testcase_config = {
             "input_path": "testing.txt",
-            "testset_list_path": "/tmp/cl_0123_ps_xx_dr_01_sam_200_testset.txt",
             "testing_percentage": "10",
             "validation_percentage": "10",
             "weights_file": "/tmp/vgg16_weights.npz",

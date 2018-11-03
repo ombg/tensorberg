@@ -93,13 +93,34 @@ class FullyConnectedNet(AbstractNet):
     @property
     def prediction(self):
         if self._prediction == None:
-            # fc3
-            fc3l, fc3w, fc3b = layers.fc(self.data,
-                                         num_in=4096,
-                                         num_out=4,
-                                         name='output_layer',
+            data_dim = int(self.data.shape[1])
+            layer_name = 'fc1'
+            fc1l, fc1w, fc1b = layers.fc(self.data,
+                                         num_in=data_dim,
+                                         units=2048,
+                                         name=layer_name,
+                                         relu=True)
+            self.parameters += [fc1w, fc1b]
+            tf.summary.histogram(layer_name, fc1l)
+
+            layer_name = 'fc2'
+            fc2l, fc2w, fc2b = layers.fc(fc1l,
+                                         num_in=2048,
+                                         units=1024,
+                                         name=layer_name,
+                                         relu=True)
+            self.parameters += [fc2w, fc2b]
+            tf.summary.histogram(layer_name, fc2l)
+
+            layer_name = 'fc3'
+            fc3l, fc3w, fc3b = layers.fc(fc2l,
+                                         num_in=1024,
+                                         units=4,
+                                         name=layer_name,
                                          relu=False)
             self.parameters += [fc3w, fc3b]
+            tf.summary.histogram(layer_name, fc3l)
+
             self._prediction = fc3l
-            tf.summary.histogram('fc3logits', fc3l)
+
         return self._prediction
