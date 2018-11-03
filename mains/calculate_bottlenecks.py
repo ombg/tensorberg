@@ -8,7 +8,8 @@ import tensorflow as tf
 from models.vggnet import Vgg16
 from trainers.default_trainer import Trainer
 
-from utils.datahandler import FileListDatasetLoader
+from utils.datahandler import DirectoryDatasetLoader
+#from utils.datahandler import FileListDatasetLoader
 from utils.config import process_config
 from utils.dirs import create_dirs
 from utils.utils import get_args
@@ -33,7 +34,7 @@ def main():
     sess = tf.Session()
 
     # Loads data into a tf.dataset
-    image_data = FileListDatasetLoader(config)
+    image_data = DirectoryDatasetLoader(config)
 
     image_data.load_datasets(do_shuffle=False,
                              is_png=True,

@@ -32,8 +32,8 @@ class Vgg16:
         weights = np.load(weight_file)
         keys = sorted(weights.keys())
         for i, k in enumerate(keys):
-            if k.startswith('conv'):
-                sess.run(self.parameters[i].assign(weights[k]))
+            #if k.startswith('conv'):
+            sess.run(self.parameters[i].assign(weights[k]))
 
     def build_model(self):
 
@@ -312,7 +312,6 @@ class Vgg16:
                                    initializer=tf.zeros_initializer(),
                                    trainable=True)
             pool5_flat = tf.reshape(self.pool5, [-1, shape])
-            self.bottlenecks = pool5_flat
             fc1l = tf.nn.bias_add(tf.matmul(pool5_flat, fc1w), fc1b)
             self.fc1 = tf.nn.relu(fc1l)
             self.parameters += [fc1w, fc1b]
@@ -330,6 +329,7 @@ class Vgg16:
                                    trainable=True)
             fc2l = tf.nn.bias_add(tf.matmul(self.fc1, fc2w), fc2b)
             self.fc2 = tf.nn.relu(fc2l)
+            self.bottlenecks = self.fc2
             self.parameters += [fc2w, fc2b]
 
         # fc3

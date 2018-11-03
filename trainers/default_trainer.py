@@ -7,7 +7,7 @@ from scipy.misc import imread, imresize
 from utils import datahandler
 from tqdm import tqdm
 
-from configs.imagenet_classes import class_names
+from configs.flowers_classes import class_names
 
 class Trainer:
     def __init__(self, sess, model, config, data_loader=None):
@@ -126,8 +126,6 @@ class Trainer:
         tf.logging.info('Confusion matrix:\n{}'.format(confusion_matrix))
 
     def predict(self, image_path, num_images=1):
-        raise NotImplementedError
-        #TODO
         if num_images == 1:
             img1 = imread(image_path, mode='RGB')
             img1 = imresize(img1, (224, 224))
@@ -135,7 +133,7 @@ class Trainer:
             raise NotImplementedError
 
         prob = self.sess.run(self.model.softmax,
-                                feed_dict={self.model.images: [img1]})[0]
+                                feed_dict={self.model.data: [img1]})[0]
         preds = (np.argsort(prob)[::-1])[0:5]
         for p in preds:
             print(class_names[p], prob[p])

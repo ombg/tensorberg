@@ -24,10 +24,12 @@ class AbstractNet(ABC):
         self._optimize = None
         self._accuracy = None
         self._cm = None
+        self._softmax = None
         
     def build_graph(self):
        self.prediction 
        self.loss
+       self.softmax
        self.cm
        self.optimize
        self.accuracy
@@ -50,8 +52,6 @@ class AbstractNet(ABC):
                 reg_loss = tf.losses.get_regularization_loss()
                 self._loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
                 tf.summary.scalar('total_loss', self._loss)
-                softmax = tf.nn.softmax(self.prediction)
-                tf.summary.histogram('softmax', softmax)
         return self._loss
 
     @property
@@ -80,6 +80,13 @@ class AbstractNet(ABC):
             pred = tf.argmax(self.prediction, axis=1)
             lbl  = tf.argmax(self.labels, axis=1)
             self._cm = tf.confusion_matrix(lbl, pred)
+        return self._cm
+
+    @property
+    def softmax(self):
+        if self._softmax == None:
+            self._softmax = tf.nn.softmax(self.prediction)
+            tf.summary.histogram('softmax', self._softmax)
         return self._cm
 
     def load_weights_from_numpy(self, weight_file, sess):
@@ -122,5 +129,21 @@ class FullyConnectedNet(AbstractNet):
             tf.summary.histogram(layer_name, fc3l)
 
             self._prediction = fc3l
+
+        return self._prediction
+
+class OutputLayer(AbstractNet):
+    @property
+    def prediction(self):
+        if self._prediction == None:
+            data_dim = int(self.data.shape[1])
+            layer_name = 'fc1'
+            fc1l, fc1w, fc1b = layers.fc(self.data,
+                                         num_in=data_dim,
+                                         units=5,
+                                         name=layer_name,
+                                         relu=False)
+            tf.summary.histogram(layer_name, fc1l)
+            self._prediction = fc1l
 
         return self._prediction

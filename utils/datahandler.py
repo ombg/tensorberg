@@ -388,13 +388,13 @@ def dset_from_ordered_dict(ord_dict,
         #TODO warn if values do not return constant number of bottleneck features
         raw_values = tf.string_split([raw_string], delimiter=',').values
         float_values = tf.strings.to_number(raw_values, out_type=tf.float32)
-        float_values.set_shape([2048])
+        float_values.set_shape([4096])
         return float_values
 
     def _parse_png(filename):
         image_string = tf.read_file(filename)
-        image_decoded = tf.image.decode_png(image_string, channels=3)
-        image_resized = tf.image.resize_images(image_decoded, [64, 64])
+        image_decoded = tf.image.decode_jpeg(image_string, channels=3)
+        image_resized = tf.image.resize_images(image_decoded, [224, 224])
         return image_resized
 
     samples_list, labels_list = get_files_from_ord_dict(ord_dict, root_dir, subset)
@@ -408,8 +408,7 @@ def dset_from_ordered_dict(ord_dict,
 
     dset = tf.data.Dataset.zip((dset_x, dset_y))
     if do_shuffle:
-        #dset = dset.shuffle()
-        pass
+        dset = dset.shuffle(4000)
 
     dset = dset.repeat(repetitions).batch(batch_size)
     num_samples = len(samples_list)
