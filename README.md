@@ -6,18 +6,18 @@ Some features are:
 
 * Usage of TensorFlow's low-level Python API. Nothing is hidden. It is more lines of code, but you see what is going on.
 * Usage of `tf.data.Dataset` whereever possible. No need to use `feed_dict`.
-* Usage of Tensorboard and multiple tf.summary.FileWriter`s to compare training and validation accuracy in one graph.
+* Usage of Tensorboard and multiple `tf.summary.FileWriter`s to compare training and validation accuracy in one graph.
 * Usage of function decorators (TODO) to structure the code nicely.
 
 ## Installation
 
 * Clone the repository
 * Inside the repository's root directory, type
-{{{
+```
 pipenv install
-}}}
+```
 
-This installs some required packages. 
+This installs some required packages, **including TensorFlow 1.10.1**. If you already have Tensorflow, just delete the respective line in the file `Pipfile`.
 It is still a work in progress but might help to get people started with data handling adn simple classification models in TensorFlow.
 
 This work is inspired by the following repositories and blog posts:
