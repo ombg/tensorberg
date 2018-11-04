@@ -5,7 +5,7 @@ sys.path.extend(['..'])
 
 import tensorflow as tf
 
-from models.fcn import OutputLayer
+from models.fcn import FullyConnectedNet
 from trainers.default_trainer import Trainer
 
 from utils.datahandler import DirectoryDatasetLoader
@@ -35,7 +35,7 @@ def main():
                                      is_png=False,
                                      train_repetitions=-1)
     # create instance of the model 
-    model = OutputLayer(config, data_loader=bottlenecks_loader)
+    model = FullyConnectedNet(config, data_loader=bottlenecks_loader)
 
     # TODO There is a fancy way to get rid of this using decorators:
     # https://danijar.com/structuring-your-tensorflow-models/
@@ -44,9 +44,8 @@ def main():
     # Trainer loops over the data using the model
     trainer = Trainer(sess, model, config, data_loader=bottlenecks_loader)
 
-    #trainer.train()
-    trainer.test(config.checkpoint_dir_restore)
-    trainer.predict('/home/oliver/data/misc/keukenhof-tulpe.jpg')
+    trainer.train()
+    trainer.test()
     tf.logging.info('==== Configuration ====')
     tf.logging.info(pprint.pprint(config))
 

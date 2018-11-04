@@ -388,7 +388,7 @@ def dset_from_ordered_dict(ord_dict,
         #TODO warn if values do not return constant number of bottleneck features
         raw_values = tf.string_split([raw_string], delimiter=',').values
         float_values = tf.strings.to_number(raw_values, out_type=tf.float32)
-        float_values.set_shape([4096])
+        float_values.set_shape([25088])
         return float_values
 
     def _parse_png(filename):

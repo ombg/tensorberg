@@ -46,6 +46,7 @@ def main():
     # Trainer loops over the data using the model
     trainer = Trainer(sess, model, config, data_loader=image_data)
 
+    tf.logging.info('Loading pre-trained weights...')
     model.load_weights_from_numpy(config.weights_file, sess)
 
     trainer.create_bottlenecks(subset='training')

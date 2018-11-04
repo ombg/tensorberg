@@ -5,7 +5,7 @@
     "weights_file": "/tmp/vgg16_weights.npz",
     "dataset_name": "flowers",
     "work_dir": "/home/oliver/projects/crowdnet/tensorberg/no_sync/experiments/",
-    "exp_name": "flowers_vgg16_fc3",
+    "exp_name": "flowers_vgg16_pool5",
     "checkpoint_to_restore": "dummy",
     "num_epochs": 1,
     "learning_rate": 0.001,
