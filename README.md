@@ -18,7 +18,7 @@ pipenv install
 ```
 
 This installs some required packages, **including TensorFlow 1.10.1**. If you already have Tensorflow, just delete the respective line in the file `Pipfile`.
-It is still a work in progress but might help to get people started with data handling adn simple classification models in TensorFlow.
+It is still a work in progress but might help to get people started with data handling and simple classification models in TensorFlow.
 
 This work is inspired by the following repositories and blog posts:
 * ["TensorFlow Project Template"](https://github.com/MrGemy95/Tensorflow-Project-Template)

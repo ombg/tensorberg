@@ -5,7 +5,7 @@ sys.path.extend(['..'])
 
 import tensorflow as tf
 
-from models.fcn import FullyConnectedNet
+from models.classification import FullyConnectedNet
 from trainers.default_trainer import Trainer
 
 from utils.datahandler import DirectoryDatasetLoader
