@@ -16,7 +16,7 @@ class LayersTest(tf.test.TestCase):
         with self.test_session() as sess:
             x = tf.zeros((32,227,227,3), dtype=tf.float32)
             expected_conv_out = tf.zeros((32,55,55,96),dtype=tf.float32, name='expectedout')
-            actual_conv_out, weights, biases = layers.conv(x, 11, 11, 96, 4, 4, name='convtest', padding='VALID', groups=1)
+            actual_conv_out, weights, biases = layers.conv(x, 11, 11, 96, 4, 4, name='convtest', padding='VALID')
             sess.run(tf.initializers.variables([weights, biases]))
             self.assertAllEqual(tf.shape(actual_conv_out), tf.shape(expected_conv_out))
 
