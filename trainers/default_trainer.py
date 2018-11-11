@@ -34,8 +34,8 @@ class Trainer:
             raise RuntimeError
 
         train_id = np.random.randint(1e6,size=1)[0]
-        tf.logging.info('train_id: {}'.format(train_id))
-        tf.logging.info('Initializing data...')
+        tf.logging.info('train(): train_id: {}'.format(train_id))
+        tf.logging.info('train(): Initializing data...')
         
         global_step = tf.train.get_or_create_global_step()
     
@@ -47,18 +47,13 @@ class Trainer:
             self.config.summary_dir + 'run_' + str(train_id) + '/val', self.sess.graph)
     
         #first_run = True
-        tf.logging.info('Training for {} epochs...'.format(self.config.num_epochs))
+        tf.logging.info('train(): Training for {} epochs...'.format(self.config.num_epochs))
         for i in range(self.config.num_epochs):
-            tf.logging.info('===== EPOCH {} ====='.format(i))
+            tf.logging.info('train(): ===== EPOCH {} ====='.format(i))
             # Initialize iterator with training data
             self.data_loader.initialize_train(self.sess)
             #Do not monitor, just train for one epoch
             for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
-
-#                if first_run:
-#                    _, data_batch = self.sess.run([self.model.optimize, self.model.data])
-#                    first_run = False
-#                    np.save('/tmp/data_batch_0.npy', data_batch)
                 self.sess.run(self.model.optimize)
     
             # Monitor the training after every epoch
@@ -78,7 +73,7 @@ class Trainer:
                            self.write_op,
                            global_step]
             val_loss, val_acc, summary_val, global_step_vl = self.sess.run(fetches_val)
-            tf.logging.info(('#{}: train_loss: {:5.2f} train_acc: {:5.2f}%' 
+            tf.logging.info(('train(): #{}: train_loss: {:5.2f} train_acc: {:5.2f}%' 
                                  ' val_loss: {:5.2f} val_acc: {:5.2f}%').format(
                                      global_step_vl,
                                      loss_vl, train_acc*100.0,
@@ -88,7 +83,7 @@ class Trainer:
             val_writer.flush()
 
         save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
-        tf.logging.info('Model checkpoint saved to %s' % save_path)
+        tf.logging.info('train(): Model checkpoint saved to %s' % save_path)
     
         train_writer.close()
         val_writer.close()
@@ -103,7 +98,6 @@ class Trainer:
         # Check if test data is loaded
         if self.data_loader == None:
             raise RuntimeError
-        tf.logging.info('Starting testing now!')
         # Load test dataset
         self.data_loader.initialize_test(self.sess)
         accuracies = []

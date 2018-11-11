@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def fc(x, num_in, units, name, relu=True):
+def fc(x, num_in, units, name, relu=True, force_alloc=False):
     """Create a fully connected layer.
     Args:
         x: A `Tensor`. It holds the input samples.
@@ -9,6 +9,11 @@ def fc(x, num_in, units, name, relu=True):
     Returns:
     Output tensor the same shape as `x` except the last dimension is of size `units`.    
     """
+    if num_in * units > 3e8 and force_alloc == False:
+        raise MemoryError(('You are trying to allocate more than {} bytes' 
+                           ' for a single weight matrix.'
+                           ' If this is a good idea'
+                           ' use `force_alloc=True`').format(int(3e8 * 4)))
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE) as scope:
 
         # Create tf variables for the weights and biases
@@ -33,7 +38,7 @@ def fc(x, num_in, units, name, relu=True):
         return act, weights, biases
 
 def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
-         padding='same'):
+         padding='SAME', trainable=True):
     """Create a convolution layer.
 
     Adapted from: https://github.com/ethereon/caffe-tensorflow
@@ -51,12 +56,12 @@ def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
                                          input_channels, num_filters],
                                   initializer=tf.glorot_uniform_initializer(),
                                   regularizer=tf.nn.l2_loss,
-                                  trainable=True)
+                                  trainable=trainable)
 
         biases = tf.get_variable(name='biases',
                                  shape=[num_filters],
                                  initializer=tf.zeros_initializer(),
-                                 trainable=True)
+                                 trainable=trainable)
 
         out = tf.nn.conv2d(x, weights, strides=[1, stride_y, stride_x, 1],
                                         padding=padding)

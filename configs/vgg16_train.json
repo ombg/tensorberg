@@ -1,0 +1,15 @@
+{
+    "input_path":"/data/flower_photos/img_dir",
+    "testing_percentage": "10",
+    "validation_percentage": "10",
+    "weights_file": "/tmp/vgg16_weights.npz",
+    "dataset_name": "flowers",
+    "work_dir": "/path/to/experiments/",
+    "exp_name": "flowers_vgg16_train_fc",
+    "checkpoint_to_restore": "run_196807",
+    "num_epochs": 1,
+    "learning_rate": 0.001,
+    "batch_size": 16,
+    "max_to_keep":5
+}
+
