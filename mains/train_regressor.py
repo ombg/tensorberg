@@ -21,7 +21,7 @@ def main():
         config = process_config(args.config)
 
     except Exception as e:
-        print("missing or invalid arguments %s" % e)
+        print("missing or invalid config file %s" % e)
         exit(0)
 
     # create the experiments dirs

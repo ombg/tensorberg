@@ -32,11 +32,11 @@ class AbstractRegressor(ABC):
         
     def build_graph(self):
        self.prediction 
-       self.loss
-       self.softmax
-       self.cm
-       self.optimize
-       self.accuracy
+       #self.loss
+       #self.softmax
+       #self.cm
+       #self.optimize
+       #self.accuracy
 
     @abstractmethod
     def prediction(self):
@@ -193,9 +193,9 @@ class VggMod(AbstractRegressor):
             self.parameters += [kernel, biases]
             # pool4
             with tf.variable_scope('conv4_3') as scope:
-                pool4 = tf.nn.max_pool(conv3_3,
+                pool4 = tf.nn.max_pool(conv4_3,
                                        ksize=[1, 2, 2, 1],
-                                       strides=[1, 2, 2, 1],
+                                       strides=[1, 1, 1, 1],
                                        padding='SAME',
                                        name=scope.name + 'pool4')
 
@@ -214,14 +214,14 @@ class VggMod(AbstractRegressor):
                                                   name=layer_name, trainable=True)
             self.parameters += [kernel, biases]
 
-            concat_layer = tf.concat([conv3_pool, conv4_pool, conv5_3], axis=1)
+            concat_layer = tf.concat([pool3, pool4, conv5_3], axis=3)
             
             layer_name = 'conv6'
             conv6, kernel, biases = layers.conv(concat_layer, 3, 3, 64, 1, 1,
                                                   name=layer_name, trainable=True)
             self.parameters += [kernel, biases]
             layer_name = 'conv7'
-            conv7, kernel, biases = layers.conv(concat_layer, 1, 1, 1, 1, 1,
+            conv7, kernel, biases = layers.conv(conv6, 1, 1, 1, 1, 1,
                                                   name=layer_name, trainable=True)
             conv7_relu = tf.nn.leaky_relu(conv7, alpha=0.01, name='conv7_relu')
             self._prediction = conv7_relu
