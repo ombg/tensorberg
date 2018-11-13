@@ -1,7 +1,9 @@
 import tensorflow as tf
 
-#TODO Only because of `shape = int(np.prod(self.pool5.get_shape()[1:]))`
-import numpy as np
+import numpy as np #TODO only because of load_weights_from_numpy
+
+import operator
+from functools import reduce
 
 class Vgg16:
     def __init__(self, config, data_loader=None):
@@ -299,7 +301,8 @@ class Vgg16:
 
         # fc1
         with tf.variable_scope('fc1') as scope:
-            shape = int(np.prod(self.pool5.get_shape()[1:]))
+            # flatten the output volume
+            shape = reduce(operator.mul, self.pool5.get_shape()[1:].as_list(), 1)
             tf.logging.info('pool5_flat shape: {}'.format(shape))
             fc1w = tf.get_variable(name='weights',
                                    shape=[shape, 4096],
