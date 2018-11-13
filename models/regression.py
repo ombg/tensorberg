@@ -120,40 +120,109 @@ class VggMod(AbstractRegressor):
 
             layer_name = 'conv1_1' # [?,224,224,64]
             conv1_1, kernel, biases = layers.conv(centered_data, 3, 3, 64, 1, 1,
-                                                  name=layer_name, trainable=False)
+                                                  name=layer_name, trainable=True)
             self.parameters += [kernel, biases]
 
             layer_name = 'conv1_2'
             conv1_2, kernel, biases = layers.conv(conv1_1, 3, 3, 64, 1, 1, 
-                                                  name=layer_name, trainable=False)
+                                                  name=layer_name, trainable=True)
             self.parameters += [kernel, biases]
 
             # pool1
             with tf.variable_scope('conv1_2') as scope:
                 pool1 = tf.nn.max_pool(conv1_2,
-                                       ksize=[1, 4, 4, 1], #TODO
-                                       strides=[1, 4, 4, 1],
+                                       ksize=[1, 2, 2, 1], #TODO
+                                       strides=[1, 2, 2, 1],
                                        padding='SAME',
                                        name=scope.name + 'pool1')
 
-            # flatten the output volume
-            shape = reduce(operator.mul, pool1.get_shape()[1:].as_list(), 1)
-            pool1_flat = tf.reshape(pool1, [-1, shape])
 
-            layer_name = 'fc2'
-            fc2l, fc2w, fc2b = layers.fc(pool1_flat,
-                                         num_in=shape,
-                                         units=1024,
-                                         name=layer_name,
-                                         relu=True)
-            tf.summary.histogram(layer_name, fc2l)
+            layer_name = 'conv2_1'
+            conv2_1, kernel, biases = layers.conv(pool1, 3, 3, 128, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
 
-            layer_name = 'fc3'
-            fc3l, fc3w, fc3b = layers.fc(fc2l,
-                                         num_in=fc2l.get_shape()[1],
-                                         units=5,
-                                         name=layer_name,
-                                         relu=False)
-            tf.summary.histogram(layer_name, fc3l)
-            self._prediction = fc3l
+            layer_name = 'conv2_2'
+            conv2_2, kernel, biases = layers.conv(conv2_1, 3, 3, 128, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
+
+            # pool2
+            with tf.variable_scope('conv2_2') as scope:
+                pool2 = tf.nn.max_pool(conv2_2,
+                                       ksize=[1, 2, 2, 1],
+                                       strides=[1, 2, 2, 1],
+                                       padding='SAME',
+                                       name=scope.name + 'pool2')
+
+            layer_name = 'conv3_1'
+            conv3_1, kernel, biases = layers.conv(pool2, 3, 3, 256, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
+
+            layer_name = 'conv3_2'
+            conv3_2, kernel, biases = layers.conv(conv3_1, 3, 3, 256, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
+
+            layer_name = 'conv3_3'
+            conv3_3, kernel, biases = layers.conv(conv3_2, 3, 3, 256, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
+            # pool3
+            with tf.variable_scope('conv3_3') as scope:
+                pool3 = tf.nn.max_pool(conv3_3,
+                                       ksize=[1, 2, 2, 1],
+                                       strides=[1, 2, 2, 1],
+                                       padding='SAME',
+                                       name=scope.name + 'pool3')
+
+            layer_name = 'conv4_1'
+            conv4_1, kernel, biases = layers.conv(pool3, 3, 3, 512, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
+
+            layer_name = 'conv4_2'
+            conv4_2, kernel, biases = layers.conv(conv4_1, 3, 3, 512, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
+
+            layer_name = 'conv4_3'
+            conv4_3, kernel, biases = layers.conv(conv4_2, 3, 3, 512, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
+            # pool4
+            with tf.variable_scope('conv4_3') as scope:
+                pool4 = tf.nn.max_pool(conv3_3,
+                                       ksize=[1, 2, 2, 1],
+                                       strides=[1, 2, 2, 1],
+                                       padding='SAME',
+                                       name=scope.name + 'pool4')
+
+            layer_name = 'conv5_1'
+            conv5_1, kernel, biases = layers.conv(pool4, 3, 3, 512, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
+
+            layer_name = 'conv5_2'
+            conv5_2, kernel, biases = layers.conv(conv5_1, 3, 3, 512, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
+
+            layer_name = 'conv5_3'
+            conv5_3, kernel, biases = layers.conv(conv5_2, 3, 3, 512, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
+
+            concat_layer = tf.concat([conv3_pool, conv4_pool, conv5_3], axis=1)
+            
+            layer_name = 'conv6'
+            conv6, kernel, biases = layers.conv(concat_layer, 3, 3, 64, 1, 1,
+                                                  name=layer_name, trainable=True)
+            self.parameters += [kernel, biases]
+            layer_name = 'conv7'
+            conv7, kernel, biases = layers.conv(concat_layer, 1, 1, 1, 1, 1,
+                                                  name=layer_name, trainable=True)
+            conv7_relu = tf.nn.leaky_relu(conv7, alpha=0.01, name='conv7_relu')
+            self._prediction = conv7_relu
         return self._prediction
