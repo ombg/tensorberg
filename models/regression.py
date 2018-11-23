@@ -26,17 +26,15 @@ class AbstractRegressor(ABC):
         self._prediction = None
         self._loss = None
         self._optimize = None
-        self._accuracy = None
+        self._mae = None
         self._cm = None
         self._softmax = None
         
     def build_graph(self):
        self.prediction 
-       #self.loss
-       #self.softmax
-       #self.cm
-       #self.optimize
-       #self.accuracy
+       self.loss
+       self.optimize
+       self.mae
 
     @abstractmethod
     def prediction(self):
@@ -49,10 +47,9 @@ class AbstractRegressor(ABC):
             Compute data loss and regularization loss
             """
             with tf.name_scope('loss'):
-                cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(
-                                    labels=self.labels,
-                                    logits=self.prediction)
-                data_loss = tf.reduce_mean(cross_entropy)
+                data_loss = tf.losses.mean_squared_error(
+                                    labels=self.gt_map,
+                                    predictions=self.prediction)
                 reg_loss = tf.losses.get_regularization_loss()
                 self._loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
                 tf.summary.scalar('total_loss', self._loss)
@@ -63,35 +60,20 @@ class AbstractRegressor(ABC):
         if self._optimize == None:
             with tf.name_scope('train_step'):
                 global_step=tf.train.get_or_create_global_step()
-                optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
+                optimizer = tf.train.RMSPropOptimizer(self.config.learning_rate)
                 self._optimize = optimizer.minimize(self.loss, global_step=global_step)
         return self._optimize
 
     @property
-    def accuracy(self):
-        if self._accuracy == None:
-            with tf.name_scope('accuracy'):
-                pred = tf.argmax(self.prediction, axis=1)
-                lbl  = tf.argmax(self.labels, axis=1)
-                is_correct = tf.equal(pred, lbl)
-                self._accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
-                tf.summary.scalar('accuracy', self._accuracy)
-        return self._accuracy
-
-    @property
-    def cm(self):
-        if self._cm == None:
-            pred = tf.argmax(self.prediction, axis=1)
-            lbl  = tf.argmax(self.labels, axis=1)
-            self._cm = tf.confusion_matrix(lbl, pred)
-        return self._cm
-
-    @property
-    def softmax(self):
-        if self._softmax == None:
-            self._softmax = tf.nn.softmax(self.prediction)
-            tf.summary.histogram('softmax', self._softmax)
-        return self._cm
+    def mae(self):
+        if self._mae == None:
+            with tf.name_scope('mae'):
+                self._mae = tf.metrics.mean_absolute_error(
+                                                  self.gt_map,
+                                                  self.prediction,
+                                                  name='mae_metric')
+                tf.summary.scalar('mae', self._mae[0])
+        return self._mae
 
     def load_weights_from_numpy(self, weights_file, sess, weights_to_load=None):
         weights = np.load(weights_file)
