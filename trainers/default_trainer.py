@@ -28,6 +28,9 @@ class Trainer:
         self.write_op = tf.summary.merge_all()
         self.init = tf.global_variables_initializer()
         self.sess.run(self.init)
+        metrics_collection = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES,
+                                               scope='mae_metric')
+        self.metrics_init = tf.variables_initializer(var_list=metrics_collection)
 
     def train(self):
         if self.data_loader == None:
@@ -52,32 +55,38 @@ class Trainer:
             tf.logging.info('train(): ===== EPOCH {} ====='.format(i))
             # Initialize iterator with training data
             self.data_loader.initialize_train(self.sess)
+            self.sess.run(self.metrics_init)
             #Do not monitor, just train for one epoch
             for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
-                self.sess.run(self.model.optimize)
+                self.sess.run([self.model.optimize, self.model.mae[1])
     
             # Monitor the training after every epoch
             fetches = [self.model.optimize,
                        self.model.loss,
-                       self.model.accuracy,
+                       self.model.mae[1],
                        self.write_op,
                        global_step]
 
-            _,loss_vl, train_acc, summary_train, global_step_vl = self.sess.run(fetches)
+            _,loss_vl, _, summary_train, global_step_vl = self.sess.run(fetches)
+            train_mae = self.sess.run(self.model.mae[0])
             train_writer.add_summary(summary_train, global_step=global_step_vl)
             train_writer.flush()
+
             #Check how it goes with the validation set
             self.data_loader.initialize_val(self.sess)
+            self.sess.run(self.metrics_init)
             fetches_val = [self.model.loss,
-                           self.model.accuracy,
+                           self.model.mae[1],
                            self.write_op,
                            global_step]
-            val_loss, val_acc, summary_val, global_step_vl = self.sess.run(fetches_val)
-            tf.logging.info(('train(): #{}: train_loss: {:5.2f} train_acc: {:5.2f}%' 
-                                 ' val_loss: {:5.2f} val_acc: {:5.2f}%').format(
+
+            val_loss, _, summary_val, global_step_vl = self.sess.run(fetches_val)
+            val_mae = self.sess.run(self.model.mae[0])
+            tf.logging.info(('train(): #{}: train_loss: {:5.2f} train_mae: {:5.2f}%' 
+                                 ' val_loss: {:5.2f} val_mae: {:5.2f}%').format(
                                      global_step_vl,
-                                     loss_vl, train_acc*100.0,
-                                     val_loss, val_acc*100.0))
+                                     loss_vl, train_mae,
+                                     val_loss, val_mae))
 
             val_writer.add_summary(summary_val, global_step=global_step_vl)
             val_writer.flush()
@@ -100,24 +109,22 @@ class Trainer:
             raise RuntimeError
         # Load test dataset
         self.data_loader.initialize_test(self.sess)
-        accuracies = []
+        maes = []
         num_classes = int(self.data_loader.test_dataset.output_shapes[1][1])
         confusion_matrix = np.zeros((num_classes, num_classes),dtype=int)
         try:
             while True:
-                fetches = [self.model.cm, self.model.accuracy]
                 # Gets matrix [batch_size x num_classes] predictions
-                cm, acc = self.sess.run(fetches)
-                tf.logging.info('Per batch average test_acc: {:5.2f}%'.format(acc * 100.0))
-                accuracies.append(acc)
-                confusion_matrix += cm
+                self.sess.run(self.model.mae[1])
+                mae = self.sess.run(self.model.mae[0])
+                tf.logging.info('Per batch Mean Absolute Error: {:5.2f}%'.format(mae))
+                maes.append(mae)
         except tf.errors.OutOfRangeError:
             pass
         accuracies = np.asarray(accuracies)
-        tf.logging.info('Average accuracy of batch accuracies: {:5.2f}% (std: {})'.format(
-                            np.mean(accuracies) * 100.0,
-                            np.std(accuracies)))
-        tf.logging.info('Confusion matrix:\n{}'.format(confusion_matrix))
+        tf.logging.info('Average MAE of batch MAE: {:5.2f}% (std: {})'.format(
+                            np.mean(maes),
+                            np.std(maes)))
 
     def predict(self, image_path, num_images=1):
         if num_images == 1:
