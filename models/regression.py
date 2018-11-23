@@ -12,14 +12,14 @@ class AbstractRegressor(ABC):
         self.config = config
 
         if data_loader != None:
-            self.data, self.labels = data_loader.get_input()
+            self.data, self.gt_map = data_loader.get_input()
         else:
             self.data = tf.placeholder(tf.float32, [None, 224, 224, 3])
-            self.labels = tf.placeholder(tf.int32, [None])
+            self.gt_map = tf.placeholder(tf.float32, [None, 112, 112, 1])
 
         # TODO Necessary?
         tf.add_to_collection('inputs', self.data)
-        tf.add_to_collection('inputs', self.labels)
+        tf.add_to_collection('inputs', self.gt_map)
 
         self.parameters = []  # save/load weights in here
 

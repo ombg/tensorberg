@@ -31,11 +31,11 @@ def main():
     sess = tf.Session()
 
     # Loads data into a tf.dataset
-    #tf.logging.info('Loading dataset...')
-    #image_data = DirectoryDatasetLoader(config)
-    #image_data.load_datasets(do_shuffle=True,
-    #                         is_png=True,
-    #                         train_repetitions=-1)
+    tf.logging.info('Loading dataset...')
+    image_data = DirectoryDatasetLoader(config)
+    image_data.load_datasets(do_shuffle=True,
+                             is_png=True,
+                             train_repetitions=-1)
     # create instance of the model 
     tf.logging.info('Setting up the model graph...')
     model = VggMod(config)
