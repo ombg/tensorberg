@@ -12,6 +12,7 @@ from utils.config import process_config
 from utils.dirs import create_dirs
 from utils.utils import get_args
 
+from utils.data_utils import parse_png
 
 def main():
     # capture the config path from the run arguments
@@ -33,8 +34,8 @@ def main():
     # Loads data into a tf.dataset
     tf.logging.info('Loading dataset...')
     image_data = DirectoryDatasetLoader(config)
-    image_data.load_datasets(do_shuffle=True,
-                             is_png=True,
+    image_data.load_datasets(parse_png,
+                             do_shuffle=True,
                              train_repetitions=-1)
     # create instance of the model 
     tf.logging.info('Setting up the model graph...')

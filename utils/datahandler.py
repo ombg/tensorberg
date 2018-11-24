@@ -89,36 +89,40 @@ class AbstractDatasetLoader(ABC):
 
         self.image_lists = self.create_file_lists()
 
-    def load_datasets(self,do_shuffle=True, is_png=True, train_repetitions=-1):
+    def load_datasets(self, process_func, do_shuffle=True, train_repetitions=-1):
 
-        self.train_dataset, self.num_samples = dset_from_ordered_dict(
-                                                    self.image_lists,
+        samples_list, labels_list = get_files_from_ord_dict(self.image_lists,
                                                     self.config.input_path,
-                                                    subset='training',
-                                                    batch_size=self.config.batch_size,
-                                                    do_shuffle=do_shuffle,
-                                                    is_png=is_png,
-                                                    repetitions=train_repetitions)
+                                                    subset='training')
+        self.num_samples = len(samples_list)
+        self.train_dataset = dset_from_lists(samples_list,
+                                             labels_list,
+                                             process_func,
+                                             batch_size=self.config.batch_size,
+                                             do_shuffle=do_shuffle,
+                                             repetitions=train_repetitions)
 
         if int(self.config.validation_percentage) > 0:
-            self.val_dataset, _ = dset_from_ordered_dict(
-                                      self.image_lists, 
-                                      self.config.input_path,
-                                      subset='validation',
-                                      batch_size=self.config.batch_size,
-                                      do_shuffle=do_shuffle,
-                                      is_png=is_png,
-                                      repetitions=train_repetitions)
-
+            samples_list, labels_list = get_files_from_ord_dict(self.image_lists,
+                                                    self.config.input_path,
+                                                    subset='validation')
+            self.val_dataset = dset_from_lists(samples_list,
+                                               labels_list,
+                                               process_func,
+                                               batch_size=self.config.batch_size,
+                                               do_shuffle=do_shuffle,
+                                               repetitions=train_repetitions)
+         
         if int(self.config.testing_percentage) > 0:
-            self.test_dataset, _ = dset_from_ordered_dict(
-                                       self.image_lists, 
-                                       self.config.input_path,
-                                       subset='testing',
-                                       batch_size=self.config.batch_size,
-                                       do_shuffle=do_shuffle,
-                                       is_png=is_png,
-                                       repetitions=1)
+            samples_list, labels_list = get_files_from_ord_dict(self.image_lists,
+                                                    self.config.input_path,
+                                                    subset='testing')
+            self.test_dataset = dset_from_lists(samples_list,
+                                                labels_list,
+                                                process_func,
+                                                batch_size=self.config.batch_size,
+                                                do_shuffle=do_shuffle,
+                                                repetitions=1)
 
         self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
                                                         self.train_dataset.output_shapes)
@@ -372,37 +376,24 @@ def get_files_from_ord_dict(ord_dict, root_dir, subset):
 
     return samples_list, labels_list
 
-def dset_from_ordered_dict(ord_dict,
-                           root_dir,
-                           subset,
-                           batch_size=64,
-                           do_shuffle=True,
-                           repetitions=-1,
-                           is_png=True):
+def dset_from_lists(samples_list,
+                    labels_list,
+                    process_func,
+                    batch_size=64,
+                    do_shuffle=True,
+                    repetitions=-1):
+    """
+    Creates a TensorFlow Dataset instance from a list of files.
+    Performs additional preprocessing using `process_func`.
+    """
+    if len(labels_list < 200):
+        tf.logging.warning('Small dataset. Accidentally skipped any classes?')
+    assert( len(labels_list) == len(samples_list))
+    num_classes = len(np.unique(labels_list))
 
-    num_classes = len(ord_dict.keys())
 
-    def _parse_txt(filename):
-
-        raw_string = tf.read_file(filename)
-        #TODO warn if values do not return constant number of bottleneck features
-        raw_values = tf.string_split([raw_string], delimiter=',').values
-        float_values = tf.strings.to_number(raw_values, out_type=tf.float32)
-        float_values.set_shape([25088])
-        return float_values
-
-    def _parse_png(filename):
-        image_string = tf.read_file(filename)
-        image_decoded = tf.image.decode_jpeg(image_string, channels=3)
-        image_resized = tf.image.resize_images(image_decoded, [224, 224])
-        return image_resized
-
-    samples_list, labels_list = get_files_from_ord_dict(ord_dict, root_dir, subset)
     dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(samples_list))
-    if is_png:
-        dset_x = dset_x.map(_parse_png)
-    else:
-        dset_x = dset_x.map(_parse_txt)
+    dset_x = dset_x.map(process_func)
     dset_y = tf.data.Dataset.from_tensor_slices(tf.constant(labels_list))
     dset_y = dset_y.map(lambda z: tf.one_hot(z, num_classes))
 
@@ -411,8 +402,7 @@ def dset_from_ordered_dict(ord_dict,
         dset = dset.shuffle(4000)
 
     dset = dset.repeat(repetitions).batch(batch_size)
-    num_samples = len(samples_list)
-    return dset, num_samples
+    return dset
 
 
   

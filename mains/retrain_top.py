@@ -13,6 +13,7 @@ from utils.config import process_config
 from utils.dirs import create_dirs
 from utils.utils import get_args
 
+from utils.data_utils import parse_txt
 
 def main():
     # capture the config path from the run arguments
@@ -31,8 +32,8 @@ def main():
     # Loads data into a tf.dataset
     bottlenecks_loader = DirectoryDatasetLoader(config)
 
-    bottlenecks_loader.load_datasets(do_shuffle=True,
-                                     is_png=False,
+    bottlenecks_loader.load_datasets(parse_txt,
+                                     do_shuffle=True,
                                      train_repetitions=-1)
     # create instance of the model 
     model = FullyConnectedNet(config, data_loader=bottlenecks_loader)

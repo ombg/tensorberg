@@ -3,6 +3,7 @@ from __future__ import print_function
 from builtins import range
 from six.moves import cPickle as pickle
 import numpy as np
+import tensorflow as tf
 import os
 from imageio import imread
 from skimage.transform import resize
@@ -10,6 +11,20 @@ import platform
 
 from ompy import fileio
 from ompy import ml
+
+def parse_txt(filename):
+    raw_string = tf.read_file(filename)
+    #TODO warn if values do not return constant number of bottleneck features
+    raw_values = tf.string_split([raw_string], delimiter=',').values
+    float_values = tf.strings.to_number(raw_values, out_type=tf.float32)
+    float_values.set_shape([25088])
+    return float_value
+
+def parse_png(filename):
+    image_string = tf.read_file(filename)
+    image_decoded = tf.image.decode_jpeg(image_string, channels=3)
+    image_resized = tf.image.resize_images(image_decoded, [224, 224])
+    return image_resized
 
 def float_string_to_list(filename):
     """Converts a ascii list of float numbers to a python list of floats
