@@ -58,7 +58,7 @@ class Trainer:
             self.sess.run(self.metrics_init)
             #Do not monitor, just train for one epoch
             for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
-                self.sess.run([self.model.optimize, self.model.mae[1])
+                self.sess.run([self.model.optimize, self.model.mae[1]])
     
             # Monitor the training after every epoch
             fetches = [self.model.optimize,

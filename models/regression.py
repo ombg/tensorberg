@@ -15,7 +15,7 @@ class AbstractRegressor(ABC):
             self.data, self.gt_map = data_loader.get_input()
         else:
             self.data = tf.placeholder(tf.float32, [None, 224, 224, 3])
-            self.gt_map = tf.placeholder(tf.float32, [None, 112, 112, 1])
+            self.gt_map = tf.placeholder(tf.float32, [None, 28, 28, 1])
 
         # TODO Necessary?
         tf.add_to_collection('inputs', self.data)
@@ -27,8 +27,6 @@ class AbstractRegressor(ABC):
         self._loss = None
         self._optimize = None
         self._mae = None
-        self._cm = None
-        self._softmax = None
         
     def build_graph(self):
        self.prediction 
@@ -87,9 +85,7 @@ class AbstractRegressor(ABC):
             sess.run(self.parameters[i].assign(weights[k]))
 
 class VggMod(AbstractRegressor):
-    """
-    Toy net, for testing. Do not use.
-    """
+
     @property
     def prediction(self):
         if self._prediction == None:

@@ -38,7 +38,7 @@ def main():
                              train_repetitions=-1)
     # create instance of the model 
     tf.logging.info('Setting up the model graph...')
-    model = VggMod(config)
+    model = VggMod(config, data_loader=image_data)
 
     # TODO There is a fancy way to get rid of this using decorators:
     # https://danijar.com/structuring-your-tensorflow-models/
@@ -58,10 +58,10 @@ def main():
                                   sess,
                                   weights_to_load=keys)
 
-    #tf.logging.info('Starting training now...')
-    #trainer.train()
-    #tf.logging.info('Starting testing now...')
-    #trainer.test()
+    tf.logging.info('Starting training now...')
+    trainer.train()
+    tf.logging.info('Starting testing now...')
+    trainer.test()
     tf.logging.info('==== Configuration summary====')
     print(pprint.pprint(config))
     

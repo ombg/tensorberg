@@ -7,7 +7,7 @@ import tensorflow as tf
 import os
 from imageio import imread
 from skimage.transform import resize
-from skimage import filters
+from skimage import filters, util
 import platform
 
 from ompy import fileio
@@ -18,6 +18,7 @@ def load_image_and_blur(filename):
     image = util.img_as_float32(image)
     image = filters.gaussian(image) # Blur image
     image = resize(image, [28, 28], mode='reflect')
+    image = image.astype('float32')
     image = image[:,:,np.newaxis] # TF insists on 3rd dimension.
     return image
 
