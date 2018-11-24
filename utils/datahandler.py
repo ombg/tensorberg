@@ -120,6 +120,9 @@ class RegressionDatasetLoader(AbstractDatasetLoader):
         self.process_images = process_images
         self.process_maps = process_maps
 
+        self.num_samples = len(self.image_lists['training'])
+        self.num_batches = self.num_samples // self.config.batch_size
+
     def _create_file_lists(self, shuffle_all=True):
         """Builds train, val, and test sets from the file system.
         Returns:
@@ -127,12 +130,12 @@ class RegressionDatasetLoader(AbstractDatasetLoader):
           split into training, testing, and validation sets within each label.
           The order of items defines the class indices.
         """
-        images_path = os.join.path(self.config.input_path, 'images')
-        maps_path = os.join.path(self.config.input_path, 'maps')
+        images_path = os.path.join(self.config.input_path, 'images')
+        maps_path = os.path.join(self.config.input_path, 'maps')
         images_list = fileio.read_dir_to_list(images_path)
         maps_list = fileio.read_dir_to_list(maps_path)
         assert( len(images_list) == len(maps_list))
-        zipped_samples = list(zip(samples_list, maps_list))
+        zipped_samples = list(zip(images_list, maps_list))
 
         if shuffle_all:
             shuffle(zipped_samples)
@@ -143,10 +146,7 @@ class RegressionDatasetLoader(AbstractDatasetLoader):
 
     def load_datasets(self, do_shuffle=True, train_repetitions=-1):
 
-        self.num_samples = len(self.samples_list)
-        self.num_batches = self.num_samples // self.config.batch_size
-
-        self.train_dataset = dset_from_image_pair(samples_list['training'],
+        self.train_dataset = dset_from_image_pair(self.image_lists['training'],
                                                   self.process_images,
                                                   self.process_maps,
                                                   batch_size=self.config.batch_size,
@@ -154,7 +154,7 @@ class RegressionDatasetLoader(AbstractDatasetLoader):
                                                   repetitions=train_repetitions)
 
         if int(self.config.validation_percentage) > 0:
-            self.val_dataset = dset_from_image_pair(samples_list['validation'],
+            self.val_dataset = dset_from_image_pair(self.image_lists['validation'],
                                                     self.process_images,
                                                     self.process_maps,
                                                     batch_size=self.config.batch_size,
@@ -162,7 +162,7 @@ class RegressionDatasetLoader(AbstractDatasetLoader):
                                                     repetitions=train_repetitions)
          
         if int(self.config.testing_percentage) > 0:
-            self.test_dataset = dset_from_image_pair(samples_list['testing'],
+            self.test_dataset = dset_from_image_pair(self.image_lists['testing'],
                                                      self.process_images,
                                                      self.process_maps,
                                                      batch_size=self.config.batch_size,
@@ -171,7 +171,7 @@ class RegressionDatasetLoader(AbstractDatasetLoader):
         self._create_iterators()
 
 class DatasetLoaderClassifier(AbstractDatasetLoader):
-    def __init__(self, config)
+    def __init__(self, config):
         super().__init__(config)
 
     def load_datasets(self, process_func, do_shuffle=True, train_repetitions=-1):
@@ -217,7 +217,7 @@ class DatasetLoaderClassifier(AbstractDatasetLoader):
         pass
 
 class FileListDatasetLoader(DatasetLoaderClassifier):
-    def __init__(self, config)
+    def __init__(self, config):
         super().__init__(config)
 
     def create_file_lists(self):
@@ -317,7 +317,7 @@ class FileListDatasetLoader(DatasetLoaderClassifier):
         return samples_list
 
 class DirectoryDatasetLoader(DatasetLoaderClassifier):
-    def __init__(self, config)
+    def __init__(self, config):
         super().__init__(config)
 
     def create_file_lists(self):
@@ -490,7 +490,7 @@ def dset_from_image_pair(image_pairs,
     maps_list = [p[1] for p in image_pairs]
 
     # Create Dataset of images
-    dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(images_list)
+    dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(images_list))
     dset_x = dset_x.map(process_images)
 
     # Create Dataset of maps
