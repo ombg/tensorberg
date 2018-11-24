@@ -12,9 +12,10 @@ This class will contain different loaders for cifar 100 dataset
 Supports IMGDB4 and CIFAR dataset
 """
 from utils import data_utils, dirs
-from ompy import fileio
+from ompy import fileio, ml
 
 from abc import ABC, abstractmethod
+from random import shuffle
 import collections
 import os
 import hashlib
@@ -84,10 +85,94 @@ class ImgdbLoader:
 
 class AbstractDatasetLoader(ABC):
     def __init__(self, config):
-
         self.config = config
+        self.image_lists = self._create_file_lists()
 
-        self.image_lists = self.create_file_lists()
+    @abstractmethod
+    def _create_file_lists():
+        pass
+
+    def _create_iterators(self):
+        self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
+                                                        self.train_dataset.output_shapes)
+
+        self.training_init_op = self.iterator.make_initializer(self.train_dataset)
+
+        if int(self.config.validation_percentage) > 0:
+            self.val_init_op = self.iterator.make_initializer(self.val_dataset)
+        if int(self.config.testing_percentage) > 0:
+            self.test_init_op = self.iterator.make_initializer(self.test_dataset)
+
+
+    def initialize_train(self, sess):
+        sess.run(self.training_init_op)
+    def initialize_val(self, sess):
+        sess.run(self.val_init_op)
+    def initialize_test(self, sess):
+        sess.run(self.test_init_op)
+    def get_input(self):
+        return self.iterator.get_next()
+
+
+class RegressionDatasetLoader(AbstractDatasetLoader):
+    def __init__(self, config, process_images, process_maps):
+        super().__init__(config)
+        self.process_images = process_images
+        self.process_maps = process_maps
+
+    def _create_file_lists(self, shuffle_all=True):
+        """Builds train, val, and test sets from the file system.
+        Returns:
+          An OrderedDict containing an entry for each label subfolder, with images
+          split into training, testing, and validation sets within each label.
+          The order of items defines the class indices.
+        """
+        images_path = os.join.path(self.config.input_path, 'images')
+        maps_path = os.join.path(self.config.input_path, 'maps')
+        images_list = fileio.read_dir_to_list(images_path)
+        maps_list = fileio.read_dir_to_list(maps_path)
+        assert( len(images_list) == len(maps_list))
+        zipped_samples = list(zip(samples_list, maps_list))
+
+        if shuffle_all:
+            shuffle(zipped_samples)
+
+        return ml.create_subsets(zipped_samples,
+                                 self.config.validation_percentage,
+                                 self.config.testing_percentage)
+
+    def load_datasets(self, do_shuffle=True, train_repetitions=-1):
+
+        self.num_samples = len(self.samples_list)
+        self.num_batches = self.num_samples // self.config.batch_size
+
+        self.train_dataset = dset_from_image_pair(samples_list['training'],
+                                                  self.process_images,
+                                                  self.process_maps,
+                                                  batch_size=self.config.batch_size,
+                                                  do_shuffle=do_shuffle,
+                                                  repetitions=train_repetitions)
+
+        if int(self.config.validation_percentage) > 0:
+            self.val_dataset = dset_from_image_pair(samples_list['validation'],
+                                                    self.process_images,
+                                                    self.process_maps,
+                                                    batch_size=self.config.batch_size,
+                                                    do_shuffle=do_shuffle,
+                                                    repetitions=train_repetitions)
+         
+        if int(self.config.testing_percentage) > 0:
+            self.test_dataset = dset_from_image_pair(samples_list['testing'],
+                                                     self.process_images,
+                                                     self.process_maps,
+                                                     batch_size=self.config.batch_size,
+                                                     do_shuffle=do_shuffle,
+                                                     repetitions=1)
+        self._create_iterators()
+
+class DatasetLoaderClassifier(AbstractDatasetLoader):
+    def __init__(self, config)
+        super().__init__(config)
 
     def load_datasets(self, process_func, do_shuffle=True, train_repetitions=-1):
 
@@ -95,6 +180,8 @@ class AbstractDatasetLoader(ABC):
                                                     self.config.input_path,
                                                     subset='training')
         self.num_samples = len(samples_list)
+        self.num_batches = self.num_samples // self.config.batch_size
+
         self.train_dataset = dset_from_lists(samples_list,
                                              labels_list,
                                              process_func,
@@ -123,37 +210,15 @@ class AbstractDatasetLoader(ABC):
                                                 batch_size=self.config.batch_size,
                                                 do_shuffle=do_shuffle,
                                                 repetitions=1)
-
-        self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
-                                                        self.train_dataset.output_shapes)
-
-        self.training_init_op = self.iterator.make_initializer(self.train_dataset)
-
-        if int(self.config.validation_percentage) > 0:
-            self.val_init_op = self.iterator.make_initializer(self.val_dataset)
-        if int(self.config.testing_percentage) > 0:
-            self.test_init_op = self.iterator.make_initializer(self.test_dataset)
-
-        self.num_batches = self.num_samples // self.config.batch_size
-
-    def initialize_train(self, sess):
-        sess.run(self.training_init_op)
-    def initialize_val(self, sess):
-        sess.run(self.val_init_op)
-    def initialize_test(self, sess):
-        sess.run(self.test_init_op)
-    def get_input(self):
-        return self.iterator.get_next()
-
-    @abstractmethod
-    def create_file_lists():
-        pass
+        self._create_iterators()
 
     @abstractmethod
     def get_bottleneck_filenames():
         pass
 
-class FileListDatasetLoader(AbstractDatasetLoader):
+class FileListDatasetLoader(DatasetLoaderClassifier):
+    def __init__(self, config)
+        super().__init__(config)
 
     def create_file_lists(self):
         """Builds a list of training samples from a txt file.
@@ -251,7 +316,9 @@ class FileListDatasetLoader(AbstractDatasetLoader):
     
         return samples_list
 
-class DirectoryDatasetLoader(AbstractDatasetLoader):
+class DirectoryDatasetLoader(DatasetLoaderClassifier):
+    def __init__(self, config)
+        super().__init__(config)
 
     def create_file_lists(self):
         """Builds a list of training samples from the file system.
@@ -382,21 +449,25 @@ def dset_from_lists(samples_list,
                     batch_size=64,
                     do_shuffle=True,
                     repetitions=-1):
-    """
-    Creates a TensorFlow Dataset instance from a list of files.
+    """Creates a TensorFlow Dataset instance from a list of files.
     Performs additional preprocessing using `process_func`.
+    Returns:
+        A `tf.data.dataset` containing pairs of (image, label)
     """
     if len(labels_list < 200):
         tf.logging.warning('Small dataset. Accidentally skipped any classes?')
     assert( len(labels_list) == len(samples_list))
     num_classes = len(np.unique(labels_list))
 
-
+    # Create Dataset of images
     dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(samples_list))
     dset_x = dset_x.map(process_func)
+
+    # Create Dataset of maps
     dset_y = tf.data.Dataset.from_tensor_slices(tf.constant(labels_list))
     dset_y = dset_y.map(lambda z: tf.one_hot(z, num_classes))
 
+    # Merge two datasets
     dset = tf.data.Dataset.zip((dset_x, dset_y))
     if do_shuffle:
         dset = dset.shuffle(4000)
@@ -404,8 +475,40 @@ def dset_from_lists(samples_list,
     dset = dset.repeat(repetitions).batch(batch_size)
     return dset
 
+def dset_from_image_pair(image_pairs,
+                         process_images,
+                         process_maps,
+                         batch_size=64,
+                         do_shuffle=True,
+                         repetitions=-1):
+    """ Creates a TensorFlow Dataset instance from pairs of image samples.
+    Performs additional preprocessing. 
+    Returns:
+        A `tf.data.dataset` containing pairs of (image, map)
+    """
+    images_list = [p[0] for p in image_pairs]
+    maps_list = [p[1] for p in image_pairs]
 
-  
+    # Create Dataset of images
+    dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(images_list)
+    dset_x = dset_x.map(process_images)
+
+    # Create Dataset of maps
+    dset_y = tf.data.Dataset.from_tensor_slices(tf.constant(maps_list))
+    # tf.py_func makes usage of other libaries possible.
+    dset_y = dset_y.map(
+        lambda filename: tuple(tf.py_func(
+            process_maps, [filename], 
+            [tf.float32])))
+
+    # Merge two datasets
+    dset = tf.data.Dataset.zip((dset_x, dset_y))
+    if do_shuffle:
+        dset = dset.shuffle(4000)
+
+    dset = dset.repeat(repetitions).batch(batch_size)
+    return dset
+
 def get_IMGDB_dataset(img_list_filename,
                         subtract_mean=False,
                         normalize_data=False):

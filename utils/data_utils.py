@@ -7,10 +7,18 @@ import tensorflow as tf
 import os
 from imageio import imread
 from skimage.transform import resize
+from skimage import filters
 import platform
 
 from ompy import fileio
 from ompy import ml
+
+def load_image_and_blur(filename):
+    image = imread(filename.decode())
+    image = util.img_as_float32(image)
+    image = filters.gaussian(image) # Blur image
+    image = image[:,:,np.newaxis] # TF insists on 3rd dimension.
+    return image
 
 def parse_txt(filename):
     raw_string = tf.read_file(filename)
@@ -22,7 +30,7 @@ def parse_txt(filename):
 
 def parse_png(filename):
     image_string = tf.read_file(filename)
-    image_decoded = tf.image.decode_jpeg(image_string, channels=3)
+    image_decoded = tf.image.decode_png(image_string, channels=3)
     image_resized = tf.image.resize_images(image_decoded, [224, 224])
     return image_resized
 

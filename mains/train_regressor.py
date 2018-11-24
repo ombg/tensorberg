@@ -7,7 +7,8 @@ import tensorflow as tf
 from models.regression import VggMod
 from trainers.default_trainer import Trainer
 
-from utils.datahandler import DirectoryDatasetLoader
+from utils.datahandler import RegressionDatasetLoader
+from utils.data_utils import load_image_and_blur, parse_png
 from utils.config import process_config
 from utils.dirs import create_dirs
 from utils.utils import get_args
@@ -32,9 +33,8 @@ def main():
 
     # Loads data into a tf.dataset
     tf.logging.info('Loading dataset...')
-    image_data = DirectoryDatasetLoader(config)
+    image_data = RegressionDatasetLoader(config, parse_png, load_image_and_blur)
     image_data.load_datasets(do_shuffle=True,
-                             is_png=True,
                              train_repetitions=-1)
     # create instance of the model 
     tf.logging.info('Setting up the model graph...')
