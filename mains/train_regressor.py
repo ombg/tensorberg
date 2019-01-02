@@ -8,7 +8,7 @@ from models.regression import VggMod
 from trainers.default_trainer import Trainer
 
 from utils.datahandler import RegressionDatasetLoader
-from utils.data_utils import load_image_and_blur, parse_png
+from utils.data_utils import blur_png, parse_png
 from utils.config import process_config
 from utils.dirs import create_dirs
 from utils.utils import get_args
@@ -33,7 +33,7 @@ def main():
 
     # Loads data into a tf.dataset
     tf.logging.info('Loading dataset...')
-    image_data = RegressionDatasetLoader(config, parse_png, load_image_and_blur)
+    image_data = RegressionDatasetLoader(config, parse_png, blur_png)
     image_data.load_datasets(do_shuffle=True,
                              train_repetitions=-1)
     # create instance of the model 
