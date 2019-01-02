@@ -35,6 +35,7 @@ def blur_png(filename):
     image = image[tf.newaxis, :,:,:]
     image = tf.nn.conv2d(image, gauss_kernel, strides=[1,1,1,1], padding='SAME')
     image = tf.squeeze(image,[0])
+    image = tf.image.resize_images(image, [28, 28])
     return image
 
 def parse_txt(filename):
