@@ -66,11 +66,8 @@ class AbstractRegressor(ABC):
     def mae(self):
         if self._mae == None:
             with tf.name_scope('mae'):
-                self._mae = tf.metrics.mean_absolute_error(
-                                                  self.gt_map,
-                                                  self.prediction,
-                                                  name='mae_metric')
-                tf.summary.scalar('mae', self._mae[0])
+                self._mae= tf.reduce_mean(tf.abs(tf.subtract( self.gt_map, self.prediction)))
+                tf.summary.scalar('mae', self._mae)
         return self._mae
 
     def load_weights_from_numpy(self, weights_file, sess, weights_to_load=None):

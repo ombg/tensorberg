@@ -58,17 +58,17 @@ class Trainer:
             self.sess.run(self.metrics_init)
             #Do not monitor, just train for one epoch
             for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
-                self.sess.run([self.model.optimize, self.model.mae[1]])
+                self.sess.run([self.model.optimize, self.model.mae])
     
             # Monitor the training after every epoch
             fetches = [self.model.optimize,
                        self.model.loss,
-                       self.model.mae[1],
+                       self.model.mae,
                        self.write_op,
                        global_step]
 
             _,loss_vl, _, summary_train, global_step_vl = self.sess.run(fetches)
-            train_mae = self.sess.run(self.model.mae[0])
+            train_mae = self.sess.run(self.model.mae)
             train_writer.add_summary(summary_train, global_step=global_step_vl)
             train_writer.flush()
 
@@ -76,12 +76,12 @@ class Trainer:
             self.data_loader.initialize_val(self.sess)
             self.sess.run(self.metrics_init)
             fetches_val = [self.model.loss,
-                           self.model.mae[1],
+                           self.model.mae,
                            self.write_op,
                            global_step]
 
             val_loss, _, summary_val, global_step_vl = self.sess.run(fetches_val)
-            val_mae = self.sess.run(self.model.mae[0])
+            val_mae = self.sess.run(self.model.mae)
             tf.logging.info(('train(): #{}: train_loss: {:5.2f} train_mae: {:5.2f}%' 
                                  ' val_loss: {:5.2f} val_mae: {:5.2f}%').format(
                                      global_step_vl,
@@ -115,8 +115,8 @@ class Trainer:
         try:
             while True:
                 # Gets matrix [batch_size x num_classes] predictions
-                self.sess.run(self.model.mae[1])
-                mae = self.sess.run(self.model.mae[0])
+                self.sess.run(self.model.mae)
+                mae = self.sess.run(self.model.mae)
                 tf.logging.info('Per batch Mean Absolute Error: {:5.2f}%'.format(mae))
                 maes.append(mae)
         except tf.errors.OutOfRangeError:
