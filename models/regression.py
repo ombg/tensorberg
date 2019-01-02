@@ -199,5 +199,6 @@ class VggMod(AbstractRegressor):
             conv7, kernel, biases = layers.conv(conv6, 1, 1, 1, 1, 1,
                                                   name=layer_name, trainable=True)
             conv7_relu = tf.nn.leaky_relu(conv7, alpha=0.01, name='conv7_relu')
-            self._prediction = conv7_relu
+            conv7_resized = tf.image.resize_images(conv7_relu, [112, 112])
+            self._prediction = conv7_resized
         return self._prediction
