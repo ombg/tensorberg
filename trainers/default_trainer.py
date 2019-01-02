@@ -49,13 +49,13 @@ class Trainer:
         val_writer = tf.summary.FileWriter( 
             self.config.summary_dir + 'run_' + str(train_id) + '/val', self.sess.graph)
     
-        #first_run = True
         tf.logging.info('train(): Training for {} epochs...'.format(self.config.num_epochs))
         for i in range(self.config.num_epochs):
             tf.logging.info('train(): ===== EPOCH {} ====='.format(i))
             # Initialize iterator with training data
             self.data_loader.initialize_train(self.sess)
             self.sess.run(self.metrics_init)
+            tf.logging.info('Initial loss: {}'.format(self.sess.run(self.model.loss)))
             #Do not monitor, just train for one epoch
             for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
                 self.sess.run([self.model.optimize, self.model.mae])
@@ -82,8 +82,8 @@ class Trainer:
 
             val_loss, _, summary_val, global_step_vl = self.sess.run(fetches_val)
             val_mae = self.sess.run(self.model.mae)
-            tf.logging.info(('train(): #{}: train_loss: {:5.2f} train_mae: {:5.2f}%' 
-                                 ' val_loss: {:5.2f} val_mae: {:5.2f}%').format(
+            tf.logging.info(('train(): #{}: train_loss: {} train_mae: {}' 
+                                 ' val_loss: {} val_mae: {}').format(
                                      global_step_vl,
                                      loss_vl, train_mae,
                                      val_loss, val_mae))
@@ -117,12 +117,12 @@ class Trainer:
                 # Gets matrix [batch_size x num_classes] predictions
                 self.sess.run(self.model.mae)
                 mae = self.sess.run(self.model.mae)
-                tf.logging.info('Per batch Mean Absolute Error: {:5.2f}%'.format(mae))
+                tf.logging.info('Per batch Mean Absolute Error: {}'.format(mae))
                 maes.append(mae)
         except tf.errors.OutOfRangeError:
             pass
         accuracies = np.asarray(accuracies)
-        tf.logging.info('Average MAE of batch MAE: {:5.2f}% (std: {})'.format(
+        tf.logging.info('Average MAE of batch MAE: {} (std: {})'.format(
                             np.mean(maes),
                             np.std(maes)))
 
