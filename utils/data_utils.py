@@ -13,29 +13,13 @@ import platform
 from ompy import fileio
 from ompy import ml
 
-def gaussian_kernel(size: int, mean: float, std: float):
-    """Makes 2D gaussian Kernel for convolution."""
-    d = tf.distributions.Normal(mean, std)
-    vals = d.prob(tf.range(start = -size, limit = size + 1, dtype = tf.float32))
-    gauss_kernel = tf.einsum('i,j->ij', vals, vals)
-    return gauss_kernel / tf.reduce_sum(gauss_kernel)
-
-def blur_png(filename):
-    image_string = tf.read_file(filename)
-    image = tf.image.decode_png(image_string, channels=1)
-    #image = tf.image.resize_images(image, [112,112])
-    # Normalize the image
-    image = tf.to_float(image)
-    image = tf.div(
-        tf.subtract( image, tf.reduce_min(image)), 
-        tf.subtract( tf.reduce_max(image), tf.reduce_min(image)))
-    #image = tf.image.per_image_standardization(image)
-    gauss_kernel = gaussian_kernel(size=5, mean=0.0, std=1.0)
-    gauss_kernel = gauss_kernel[:,:, tf.newaxis, tf.newaxis]
-    image = image[tf.newaxis, :,:,:]
-    image = tf.nn.conv2d(image, gauss_kernel, strides=[1,1,1,1], padding='SAME')
-    image = tf.squeeze(image,[0])
-    image = tf.image.resize_images(image, [56, 56])
+def load_image_and_blur(filename):
+    image = imread(filename.decode())
+    image = util.img_as_float32(image)
+    image = filters.gaussian(image) # Blur image
+    image = resize(image, [28, 28], mode='reflect')
+    image = image.astype('float32')
+    image = image[:,:,np.newaxis] # TF insists on 3rd dimension.
     return image
 
 def parse_txt(filename):
