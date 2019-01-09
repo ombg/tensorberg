@@ -497,9 +497,7 @@ def dset_from_image_pair(image_pairs,
     dset_y = tf.data.Dataset.from_tensor_slices(tf.constant(maps_list))
     # tf.py_func makes usage of other libaries possible.
     dset_y = dset_y.map(
-        lambda filename: tuple(tf.py_func(
-            process_maps, [filename], 
-            [tf.float32])))
+        lambda filename: tf.py_func( process_maps, [filename], tf.float32))
 
     # Merge two datasets
     dset = tf.data.Dataset.zip((dset_x, dset_y))

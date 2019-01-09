@@ -4,6 +4,7 @@ import pprint
 sys.path.extend(['..'])
 
 import tensorflow as tf
+
 from models.regression import VggMod
 from trainers.default_trainer import Trainer
 

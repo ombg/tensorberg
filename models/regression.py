@@ -51,6 +51,8 @@ class AbstractRegressor(ABC):
                 reg_loss = tf.losses.get_regularization_loss()
                 self._loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
                 tf.summary.scalar('total_loss', self._loss)
+                tf.summary.image('gt_map', self.gt_map, max_outputs=2)
+                tf.summary.image('prediction', self.prediction, max_outputs=2)
         return self._loss
 
     @property
@@ -93,7 +95,7 @@ class VggMod(AbstractRegressor):
                                    shape=[1, 1, 1, 3], name='zero_mean')
                 centered_data = self.data - mean
 
-            layer_name = 'conv1_1' # [?,224,224,64]
+            layer_name = 'conv1_1' 
             conv1_1, kernel, biases = layers.conv(centered_data, 3, 3, 64, 1, 1,
                                                   name=layer_name, trainable=True)
             self.parameters += [kernel, biases]
@@ -191,9 +193,11 @@ class VggMod(AbstractRegressor):
 
             concat_layer = tf.concat([pool3, pool4, conv5_3], axis=3)
             
+            #TODO Add dropout
             layer_name = 'conv6'
             conv6, kernel, biases = layers.conv(concat_layer, 3, 3, 64, 1, 1,
                                                   name=layer_name, trainable=True)
+            #TODO Add batch normalization
             self.parameters += [kernel, biases]
             layer_name = 'conv7'
             conv7, kernel, biases = layers.conv(conv6, 1, 1, 1, 1, 1,
