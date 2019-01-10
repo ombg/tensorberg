@@ -9,11 +9,13 @@ from tqdm import tqdm
 
 from configs.flowers_classes import class_names
 
+from tensorflow.python import debug as tf_debug
+
 class Trainer:
     def __init__(self, sess, model, config, data_loader=None):
         """
         Constructing the trainer
-        :param sess: tF.Session() instance
+        :param sess: tf.Session() instance
         :param model: The model instance
         :param config: config namespace which will contain all the configurations you have specified in the json
         :param data: The data loader if specified. 
@@ -28,9 +30,6 @@ class Trainer:
         self.write_op = tf.summary.merge_all()
         self.init = tf.global_variables_initializer()
         self.sess.run(self.init)
-        metrics_collection = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES,
-                                               scope='mae_metric')
-        self.metrics_init = tf.variables_initializer(var_list=metrics_collection)
 
     def train(self):
         if self.data_loader == None:
@@ -50,15 +49,15 @@ class Trainer:
             self.config.summary_dir + 'run_' + str(train_id) + '/val', self.sess.graph)
     
         tf.logging.info('train(): Training for {} epochs...'.format(self.config.num_epochs))
+        #self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
         for i in range(self.config.num_epochs):
             tf.logging.info('train(): ===== EPOCH {} ====='.format(i))
             # Initialize iterator with training data
             self.data_loader.initialize_train(self.sess)
-            self.sess.run(self.metrics_init)
             tf.logging.info('Initial loss: {}'.format(self.sess.run(self.model.loss)))
             #Do not monitor, just train for one epoch
             for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
-                self.sess.run([self.model.optimize, self.model.mae])
+                self.sess.run([self.model.optimize])
     
             # Monitor the training after every epoch
             fetches = [self.model.optimize,
@@ -67,32 +66,29 @@ class Trainer:
                        self.write_op,
                        global_step]
 
-            _,loss_vl, _, summary_train, global_step_vl = self.sess.run(fetches)
-            train_mae = self.sess.run(self.model.mae)
+            _,train_loss, train_mae, summary_train, global_step_vl = self.sess.run(fetches)
             train_writer.add_summary(summary_train, global_step=global_step_vl)
             train_writer.flush()
 
             #Check how it goes with the validation set
             self.data_loader.initialize_val(self.sess)
-            self.sess.run(self.metrics_init)
             fetches_val = [self.model.loss,
                            self.model.mae,
                            self.write_op,
                            global_step]
 
-            val_loss, _, summary_val, global_step_vl = self.sess.run(fetches_val)
-            val_mae = self.sess.run(self.model.mae)
+            val_loss, val_mae, summary_val, global_step_vl = self.sess.run(fetches_val)
             tf.logging.info(('train(): #{}: train_loss: {} train_mae: {}' 
                                  ' val_loss: {} val_mae: {}').format(
                                      global_step_vl,
-                                     loss_vl, train_mae,
+                                     train_loss, train_mae,
                                      val_loss, val_mae))
 
             val_writer.add_summary(summary_val, global_step=global_step_vl)
             val_writer.flush()
 
-        save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
-        tf.logging.info('train(): Model checkpoint saved to %s' % save_path)
+            save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
+            tf.logging.info('train(): Model checkpoint saved to %s' % save_path)
     
         train_writer.close()
         val_writer.close()
@@ -110,18 +106,18 @@ class Trainer:
         # Load test dataset
         self.data_loader.initialize_test(self.sess)
         maes = []
-        num_classes = int(self.data_loader.test_dataset.output_shapes[1][1])
-        confusion_matrix = np.zeros((num_classes, num_classes),dtype=int)
+        #num_classes = int(self.data_loader.test_dataset.output_shapes[1][1])
+        #confusion_matrix = np.zeros((num_classes, num_classes),dtype=int)
         try:
             while True:
                 # Gets matrix [batch_size x num_classes] predictions
-                self.sess.run(self.model.mae)
+                #self.sess.run(self.model.mae)
                 mae = self.sess.run(self.model.mae)
                 tf.logging.info('Per batch Mean Absolute Error: {}'.format(mae))
                 maes.append(mae)
         except tf.errors.OutOfRangeError:
             pass
-        accuracies = np.asarray(accuracies)
+        #accuracies = np.asarray(accuracies)
         tf.logging.info('Average MAE of batch MAE: {} (std: {})'.format(
                             np.mean(maes),
                             np.std(maes)))
