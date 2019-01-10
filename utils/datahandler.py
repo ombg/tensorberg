@@ -495,9 +495,15 @@ def dset_from_image_pair(image_pairs,
 
     # Create Dataset of maps
     dset_y = tf.data.Dataset.from_tensor_slices(tf.constant(maps_list))
-    # tf.py_func makes usage of other libaries possible.
+    # tf.py_func makes usage of external libaries possible.
     dset_y = dset_y.map(
         lambda filename: tf.py_func( process_maps, [filename], tf.float32))
+
+    def _enforce_shape(map_tensor):
+        map_tensor.set_shape([56,56,1])
+        return map_tensor
+
+    dset_y = dset_y.map(_enforce_shape)
 
     # Merge two datasets
     dset = tf.data.Dataset.zip((dset_x, dset_y))
