@@ -50,9 +50,11 @@ class AbstractRegressor(ABC):
                                     predictions=self.prediction)
                 reg_loss = tf.losses.get_regularization_loss()
                 self._loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
+                tf.summary.scalar('data_loss', data_loss)
+                tf.summary.scalar('reg_loss', reg_loss)
                 tf.summary.scalar('total_loss', self._loss)
-                tf.summary.image('gt_map', self.gt_map, max_outputs=2)
-                tf.summary.image('prediction', self.prediction, max_outputs=2)
+                tf.summary.image('gt_map', self.gt_map, max_outputs=3)
+                tf.summary.image('prediction', self.prediction, max_outputs=3)
         return self._loss
 
     @property
@@ -68,8 +70,14 @@ class AbstractRegressor(ABC):
     def mae(self):
         if self._mae == None:
             with tf.name_scope('mae'):
-                self._mae= tf.reduce_mean(tf.abs(tf.subtract( self.gt_map, self.prediction)))
-                tf.summary.scalar('mae', self._mae)
+                gt_count_batch = tf.reduce_sum(self.gt_map, axis=(1,2,3))
+                pred_count_batch = tf.reduce_sum(self.prediction, axis=(1,2,3))
+                self._mae= tf.reduce_mean(tf.abs(tf.subtract(
+                               gt_count_batch,
+                               pred_count_batch)))
+                tf.summary.scalar('mean_absolut_error', self._mae)
+                tf.summary.scalar('gt_count', gt_count_batch[0])
+                tf.summary.scalar('pred_count', pred_count_batch[0] )
         return self._mae
 
     def load_weights_from_numpy(self, weights_file, sess, weights_to_load=None):
