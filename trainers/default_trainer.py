@@ -1,4 +1,5 @@
 import sys
+import os
 
 sys.path.extend(['..'])
 import tensorflow as tf
@@ -7,9 +8,16 @@ from scipy.misc import imread, imresize
 from utils import datahandler
 from tqdm import tqdm
 
-from configs.flowers_classes import class_names
-
 from tensorflow.python import debug as tf_debug
+
+def save_batch(data_batch, path_name):
+    """ Save data batch to npy files.
+    """
+    if not isinstance(data_batch, np.ndarray):
+        raise ValueError('Expects a numpy array')
+    os.makedirs(path_name, exist_ok=True)
+    for i in range(data_batch.shape[0]):
+        np.save(os.path.join(path_name,'pred_{}.npy'.format(i)), data_batch[i])
 
 class Trainer:
     def __init__(self, sess, model, config, data_loader=None):
@@ -33,7 +41,7 @@ class Trainer:
 
     def train(self):
         if self.data_loader == None:
-            raise RuntimeError
+            raise RuntimeError('No data loaded')
 
         train_id = np.random.randint(1e6,size=1)[0]
         tf.logging.info('train(): train_id: {}'.format(train_id))
@@ -101,8 +109,8 @@ class Trainer:
             saver.restore(self.sess, checkpoint_dir)
 
         # Check if test data is loaded
-        if self.data_loader == None:
-            raise RuntimeError
+        if self.data_loader == None or int(self.config.testing_percentage) <= 0:
+            raise RuntimeError('No test data available!')
         # Load test dataset
         self.data_loader.initialize_test(self.sess)
         maes = []
@@ -110,11 +118,10 @@ class Trainer:
         #confusion_matrix = np.zeros((num_classes, num_classes),dtype=int)
         try:
             while True:
-                # Gets matrix [batch_size x num_classes] predictions
-                #self.sess.run(self.model.mae)
-                mae = self.sess.run(self.model.mae)
+                mae, prediction = self.sess.run([self.model.mae, self.model.prediction])
                 tf.logging.info('Per batch Mean Absolute Error: {}'.format(mae))
                 maes.append(mae)
+                save_batch(prediction, self.config.data_path_pred)
         except tf.errors.OutOfRangeError:
             pass
         #accuracies = np.asarray(accuracies)
@@ -127,7 +134,7 @@ class Trainer:
             img1 = imread(image_path, mode='RGB')
             img1 = imresize(img1, (224, 224))
         else:
-            raise NotImplementedError
+            raise NotImplementedError('Only the prediction of exactly one image is supported.')
 
         prob = self.sess.run(self.model.softmax,
                                 feed_dict={self.model.data: [img1]})[0]
@@ -137,7 +144,7 @@ class Trainer:
 
     def create_bottlenecks(self, subset):
         if self.data_loader == None:
-            raise RuntimeError
+            raise RuntimeError('No data loaded')
         tf.logging.info('Creating bottlenecks at ' + self.config.bottleneck_dir)
         global_step = tf.train.get_or_create_global_step()
         # Load dataset
@@ -148,7 +155,7 @@ class Trainer:
             self.data_loader.initialize_val(self.sess)
             tf.logging.info('Reading validation subset!')
         else:
-            raise NotImplementedError
+            raise NotImplementedError('subset must be either \'training\' or \'validation\'')
 
         try:
             bottleneck_paths = self.data_loader.get_bottleneck_filenames(
