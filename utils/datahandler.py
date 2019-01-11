@@ -130,10 +130,8 @@ class RegressionDatasetLoader(AbstractDatasetLoader):
           split into training, testing, and validation sets within each label.
           The order of items defines the class indices.
         """
-        images_path = os.path.join(self.config.data_path_samples, 'images')
-        maps_path = os.path.join(self.config.data_path_gt, 'gt_maps')
-        images_list = fileio.read_dir_to_list(images_path)
-        maps_list = fileio.read_dir_to_list(maps_path)
+        images_list = fileio.read_dir_to_list(self.config.data_path_samples)
+        maps_list = fileio.read_dir_to_list(self.config.data_path_gt)
         assert( len(images_list) == len(maps_list))
         zipped_samples = list(zip(images_list, maps_list))
 

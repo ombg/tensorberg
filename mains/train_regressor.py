@@ -49,12 +49,12 @@ def main():
     tf.logging.info('Initialize model...')
     trainer = Trainer(sess, model, config, data_loader=image_data)
 
-    tf.logging.info('Loading model parameters...')
     keys = ['conv1_1_W', 'conv1_1_b', 'conv1_2_W', 'conv1_2_b',
             'conv2_1_W', 'conv2_1_b', 'conv2_2_W', 'conv2_2_b',
             'conv3_1_W', 'conv3_1_b', 'conv3_2_W', 'conv3_2_b', 'conv3_3_W', 'conv3_3_b',
             'conv4_1_W', 'conv4_1_b', 'conv4_2_W', 'conv4_2_b', 'conv4_3_W', 'conv4_3_b',
             'conv5_1_W', 'conv5_1_b', 'conv5_2_W', 'conv5_2_b', 'conv5_3_W', 'conv5_3_b']
+    tf.logging.info('Loading model parameters...')
     model.load_weights_from_numpy(config.weights_file,
                                   sess,
                                   weights_to_load=keys)
