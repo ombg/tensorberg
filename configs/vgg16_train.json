@@ -1,5 +1,5 @@
 {
-    "input_path":"/data/flower_photos/img_dir",
+    "data_path":"/data/flower_photos/img_dir",
     "testing_percentage": "10",
     "validation_percentage": "10",
     "weights_file": "/tmp/vgg16_weights.npz",

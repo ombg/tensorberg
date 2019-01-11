@@ -1,0 +1,17 @@
+{
+    "data_path":"/tmp/",
+    "data_path_samples":"/tmp/in_dir/images",
+    "data_path_gt":"/tmp/in_dir/gt_maps",
+    "data_path_pred":"/tmp/in_dir/pred_maps",
+    "testing_percentage": "0",
+    "validation_percentage": "10",
+    "weights_file": "/tmp/vgg16_weights.npz",
+    "dataset_name": "crowd_maps",
+    "work_dir": "/tmp/work_dir/",
+    "exp_name": "crowdnetreg_debug",
+    "checkpoint_to_restore": "no_restore",
+    "num_epochs": 20,
+    "learning_rate": 0.003,
+    "batch_size": 10,
+    "max_to_keep":5
+}

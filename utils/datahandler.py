@@ -34,7 +34,7 @@ class ImgdbLoader:
         self.config = config
         # Load data as numpy array
         data = data_utils.get_some_data(
-            self.config.input_path,
+            self.config.data_path,
             dataset_name=self.config.dataset_name,
             img_shape=(224, 224, 3),
             normalize_data=False,
@@ -130,8 +130,8 @@ class RegressionDatasetLoader(AbstractDatasetLoader):
           split into training, testing, and validation sets within each label.
           The order of items defines the class indices.
         """
-        images_path = os.path.join(self.config.input_path, 'images')
-        maps_path = os.path.join(self.config.input_path, 'maps')
+        images_path = os.path.join(self.config.data_path_samples, 'images')
+        maps_path = os.path.join(self.config.data_path_gt, 'gt_maps')
         images_list = fileio.read_dir_to_list(images_path)
         maps_list = fileio.read_dir_to_list(maps_path)
         assert( len(images_list) == len(maps_list))
@@ -177,7 +177,7 @@ class DatasetLoaderClassifier(AbstractDatasetLoader):
     def load_datasets(self, process_func, do_shuffle=True, train_repetitions=-1):
 
         samples_list, labels_list = get_files_from_ord_dict(self.image_lists,
-                                                    self.config.input_path,
+                                                    self.config.data_path,
                                                     subset='training')
         self.num_samples = len(samples_list)
         self.num_batches = self.num_samples // self.config.batch_size
@@ -191,7 +191,7 @@ class DatasetLoaderClassifier(AbstractDatasetLoader):
 
         if int(self.config.validation_percentage) > 0:
             samples_list, labels_list = get_files_from_ord_dict(self.image_lists,
-                                                    self.config.input_path,
+                                                    self.config.data_path,
                                                     subset='validation')
             self.val_dataset = dset_from_lists(samples_list,
                                                labels_list,
@@ -202,7 +202,7 @@ class DatasetLoaderClassifier(AbstractDatasetLoader):
          
         if int(self.config.testing_percentage) > 0:
             samples_list, labels_list = get_files_from_ord_dict(self.image_lists,
-                                                    self.config.input_path,
+                                                    self.config.data_path,
                                                     subset='testing')
             self.test_dataset = dset_from_lists(samples_list,
                                                 labels_list,
@@ -234,12 +234,12 @@ class FileListDatasetLoader(DatasetLoaderClassifier):
           split into training, testing, and validation sets within each label.
           The order of items defines the class indices.
         """
-        if not tf.gfile.Exists(self.config.input_path):
-            tf.logging.error("File with samples '" + self.config.input_path + "' not found.")
+        if not tf.gfile.Exists(self.config.data_path):
+            tf.logging.error("File with samples '" + self.config.data_path + "' not found.")
             raise FileNotFoundError
-        assert os.path.isfile(self.config.input_path)
-        tf.logging.info("Looking for samples in '" + self.config.input_path + "'")
-        file_list, label_list = fileio.parse_imgdb_list(self.config.input_path)
+        assert os.path.isfile(self.config.data_path)
+        tf.logging.info("Looking for samples in '" + self.config.data_path + "'")
+        file_list, label_list = fileio.parse_imgdb_list(self.config.data_path)
         
         try:
             class_names = __import__('utils.crowdnet_classes', fromlist=['class_names'])
@@ -259,7 +259,7 @@ class FileListDatasetLoader(DatasetLoaderClassifier):
         elif len(file_list) > MAX_NUM_IMAGES_PER_CLASS:
             tf.logging.warning(
                 'WARNING: List {} has more than {} samples. Some samples will '
-                'never be selected.'.format(self.config.input_path, MAX_NUM_IMAGES_PER_CLASS))
+                'never be selected.'.format(self.config.data_path, MAX_NUM_IMAGES_PER_CLASS))
     
         result = collections.OrderedDict()
         for c in range(len(class_names)):
@@ -332,12 +332,12 @@ class DirectoryDatasetLoader(DatasetLoaderClassifier):
           split into training, testing, and validation sets within each label.
           The order of items defines the class indices.
         """
-        if not tf.gfile.Exists(self.config.input_path):
-            tf.logging.error("Samples root directory '" + self.config.input_path + "' not found.")
+        if not tf.gfile.Exists(self.config.data_path):
+            tf.logging.error("Samples root directory '" + self.config.data_path + "' not found.")
             raise FileNotFoundError
-        assert os.path.isdir(self.config.input_path)
+        assert os.path.isdir(self.config.data_path)
         result = collections.OrderedDict()
-        sub_dirs = sorted(x[0] for x in tf.gfile.Walk(self.config.input_path))
+        sub_dirs = sorted(x[0] for x in tf.gfile.Walk(self.config.data_path))
         # The root directory comes first, so skip it.
         is_root_dir = True
         for sub_dir in sub_dirs:
@@ -348,11 +348,11 @@ class DirectoryDatasetLoader(DatasetLoaderClassifier):
                                   for ext in ['txt', 'TXT', 'PNG', 'png', 'JPG', 'jpg']))
             file_list = []
             dir_name = os.path.basename(sub_dir)
-            if dir_name == self.config.input_path:
+            if dir_name == self.config.data_path:
                 continue
             tf.logging.info("Looking for samples in '" + dir_name + "'")
             for extension in extensions:
-                file_glob = os.path.join(self.config.input_path, dir_name, '*.' + extension)
+                file_glob = os.path.join(self.config.data_path, dir_name, '*.' + extension)
                 file_list.extend(tf.gfile.Glob(file_glob))
             if not file_list:
                 tf.logging.warning('No files found')
