@@ -117,11 +117,15 @@ class Trainer:
         #num_classes = int(self.data_loader.test_dataset.output_shapes[1][1])
         #confusion_matrix = np.zeros((num_classes, num_classes),dtype=int)
         try:
+            bn = 0
             while True:
                 mae, prediction = self.sess.run([self.model.mae, self.model.prediction])
                 tf.logging.info('Per batch Mean Absolute Error: {}'.format(mae))
                 maes.append(mae)
-                save_batch(prediction, self.config.data_path_pred)
+                save_batch(
+                    prediction, 
+                    os.path.join(self.config.data_path_pred,'batch_{}'.format(bn)))
+                bn += 1
         except tf.errors.OutOfRangeError:
             pass
         #accuracies = np.asarray(accuracies)
