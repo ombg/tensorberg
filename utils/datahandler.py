@@ -11,7 +11,7 @@ This class will contain different loaders for cifar 100 dataset
 
 Supports IMGDB4 and CIFAR dataset
 """
-from utils import data_utils, dirs
+from utils import data_utils
 from ompy import fileio, ml
 
 from abc import ABC, abstractmethod
@@ -87,20 +87,29 @@ class AbstractDatasetLoader(ABC):
     def __init__(self, config):
         self.config = config
         self.image_lists = self._create_file_lists()
+        self.iterator = None
 
     @abstractmethod
     def _create_file_lists():
         pass
 
-    def _create_iterators(self):
-        self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
-                                                        self.train_dataset.output_shapes)
+    def _get_iterator(self, dset):
+        if not isinstance(self.iterator, tf.data.Iterator):
+            self.iterator = tf.data.Iterator.from_structure(dset.output_types,
+                                                            dset.output_shapes)
 
-        self.training_init_op = self.iterator.make_initializer(self.train_dataset)
+    def _create_iterators(self):
+
+        if self.config.is_training.lower() == 'true':
+            self._get_iterator(self.train_dataset)
+            self.training_init_op = self.iterator.make_initializer(self.train_dataset)
 
         if int(self.config.validation_percentage) > 0:
+            self._get_iterator(self.val_dataset)
             self.val_init_op = self.iterator.make_initializer(self.val_dataset)
+
         if int(self.config.testing_percentage) > 0:
+            self._get_iterator(self.test_dataset)
             self.test_init_op = self.iterator.make_initializer(self.test_dataset)
 
 
@@ -143,30 +152,33 @@ class RegressionDatasetLoader(AbstractDatasetLoader):
                                  self.config.testing_percentage)
 
     def load_datasets(self, do_shuffle=True, train_repetitions=-1):
+        try:
+            if self.config.is_training.lower() == 'true':
+                self.train_dataset = dset_from_image_pair(self.image_lists['training'],
+                                                      self.process_images,
+                                                      self.process_maps,
+                                                      batch_size=self.config.batch_size,
+                                                      do_shuffle=do_shuffle,
+                                                      repetitions=train_repetitions)
 
-        self.train_dataset = dset_from_image_pair(self.image_lists['training'],
-                                                  self.process_images,
-                                                  self.process_maps,
-                                                  batch_size=self.config.batch_size,
-                                                  do_shuffle=do_shuffle,
-                                                  repetitions=train_repetitions)
-
-        if int(self.config.validation_percentage) > 0:
-            self.val_dataset = dset_from_image_pair(self.image_lists['validation'],
-                                                    self.process_images,
-                                                    self.process_maps,
-                                                    batch_size=self.config.batch_size,
-                                                    do_shuffle=do_shuffle,
-                                                    repetitions=train_repetitions)
-         
-        if int(self.config.testing_percentage) > 0:
-            self.test_dataset = dset_from_image_pair(self.image_lists['testing'],
-                                                     self.process_images,
-                                                     self.process_maps,
-                                                     batch_size=self.config.batch_size,
-                                                     do_shuffle=do_shuffle,
-                                                     repetitions=1)
-        self._create_iterators()
+            if int(self.config.validation_percentage) > 0:
+                self.val_dataset = dset_from_image_pair(self.image_lists['validation'],
+                                                        self.process_images,
+                                                        self.process_maps,
+                                                        batch_size=self.config.batch_size,
+                                                        do_shuffle=do_shuffle,
+                                                        repetitions=train_repetitions)
+             
+            if int(self.config.testing_percentage) > 0:
+                self.test_dataset = dset_from_image_pair(self.image_lists['testing'],
+                                                         self.process_images,
+                                                         self.process_maps,
+                                                         batch_size=self.config.batch_size,
+                                                         do_shuffle=do_shuffle,
+                                                         repetitions=1)
+            self._create_iterators()
+        except IndexError as err:
+            tf.logging.error(err.args)
 
 class DatasetLoaderClassifier(AbstractDatasetLoader):
     def __init__(self, config):
@@ -180,7 +192,8 @@ class DatasetLoaderClassifier(AbstractDatasetLoader):
         self.num_samples = len(samples_list)
         self.num_batches = self.num_samples // self.config.batch_size
 
-        self.train_dataset = dset_from_lists(samples_list,
+        if self.config.is_training.lower() == 'true':
+            self.train_dataset = dset_from_lists(samples_list,
                                              labels_list,
                                              process_func,
                                              batch_size=self.config.batch_size,
@@ -486,6 +499,10 @@ def dset_from_image_pair(image_pairs,
     """
     images_list = [p[0] for p in image_pairs]
     maps_list = [p[1] for p in image_pairs]
+    
+    if len(images_list) != len(maps_list) or len(maps_list) == 0:
+        raise IndexError('Wrong # of samples in dataset',
+                        len(images_list),len(maps_list))
 
     # Create Dataset of images
     dset_x = tf.data.Dataset.from_tensor_slices(tf.constant(images_list))

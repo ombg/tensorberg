@@ -40,66 +40,70 @@ class Trainer:
         self.sess.run(self.init)
 
     def train(self):
-        if self.data_loader == None:
-            raise RuntimeError('No data loaded')
-
-        train_id = np.random.randint(1e6,size=1)[0]
-        tf.logging.info('train(): train_id: {}'.format(train_id))
-        tf.logging.info('train(): Initializing data...')
+        try:
+            if self.data_loader == None or self.config.is_training.lower() != 'true':
+                raise RuntimeError('No training data or `\"is_training\"!= \"True\"`?!')
+    
+            train_id = np.random.randint(1e6,size=1)[0]
+            tf.logging.info('train(): train_id: {}'.format(train_id))
+            tf.logging.info('train(): Initializing data...')
+            
+            global_step = tf.train.get_or_create_global_step()
         
-        global_step = tf.train.get_or_create_global_step()
-    
-        saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
-        # File writers for TensorBoard
-        train_writer = tf.summary.FileWriter( 
-            self.config.summary_dir + 'run_' + str(train_id) + '/train', self.sess.graph)
-        val_writer = tf.summary.FileWriter( 
-            self.config.summary_dir + 'run_' + str(train_id) + '/val', self.sess.graph)
-    
-        tf.logging.info('train(): Training for {} epochs...'.format(self.config.num_epochs))
-        #self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
-        for i in range(self.config.num_epochs):
-            tf.logging.info('train(): ===== EPOCH {} ====='.format(i))
-            # Initialize iterator with training data
-            self.data_loader.initialize_train(self.sess)
-            tf.logging.info('Initial loss: {}'.format(self.sess.run(self.model.loss)))
-            #Do not monitor, just train for one epoch
-            for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
-                self.sess.run([self.model.optimize])
-    
-            # Monitor the training after every epoch
-            fetches = [self.model.optimize,
-                       self.model.loss,
-                       self.model.mae,
-                       self.write_op,
-                       global_step]
-
-            _,train_loss, train_mae, summary_train, global_step_vl = self.sess.run(fetches)
-            train_writer.add_summary(summary_train, global_step=global_step_vl)
-            train_writer.flush()
-
-            #Check how it goes with the validation set
-            self.data_loader.initialize_val(self.sess)
-            fetches_val = [self.model.loss,
+            saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
+            # File writers for TensorBoard
+            train_writer = tf.summary.FileWriter( 
+                self.config.summary_dir + 'run_' + str(train_id) + '/train', self.sess.graph)
+            val_writer = tf.summary.FileWriter( 
+                self.config.summary_dir + 'run_' + str(train_id) + '/val', self.sess.graph)
+        
+            tf.logging.info('train(): Training for {} epochs...'.format(self.config.num_epochs))
+            #self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
+            for i in range(self.config.num_epochs):
+                tf.logging.info('train(): ===== EPOCH {} ====='.format(i))
+                # Initialize iterator with training data
+                self.data_loader.initialize_train(self.sess)
+                tf.logging.info('Initial loss: {}'.format(self.sess.run(self.model.loss)))
+                #Do not monitor, just train for one epoch
+                for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
+                    self.sess.run([self.model.optimize])
+        
+                # Monitor the training after every epoch
+                fetches = [self.model.optimize,
+                           self.model.loss,
                            self.model.mae,
                            self.write_op,
                            global_step]
-
-            val_loss, val_mae, summary_val, global_step_vl = self.sess.run(fetches_val)
-            tf.logging.info(('train(): #{}: train_loss: {} train_mae: {}' 
-                                 ' val_loss: {} val_mae: {}').format(
-                                     global_step_vl,
-                                     train_loss, train_mae,
-                                     val_loss, val_mae))
-
-            val_writer.add_summary(summary_val, global_step=global_step_vl)
-            val_writer.flush()
-
-            save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
-            tf.logging.info('train(): Model checkpoint saved to %s' % save_path)
     
-        train_writer.close()
-        val_writer.close()
+                _,train_loss, train_mae, summary_train, global_step_vl = self.sess.run(fetches)
+                train_writer.add_summary(summary_train, global_step=global_step_vl)
+                train_writer.flush()
+    
+                #Check how it goes with the validation set
+                self.data_loader.initialize_val(self.sess)
+                fetches_val = [self.model.loss,
+                               self.model.mae,
+                               self.write_op,
+                               global_step]
+    
+                val_loss, val_mae, summary_val, global_step_vl = self.sess.run(fetches_val)
+                tf.logging.info(('train(): #{}: train_loss: {} train_mae: {}' 
+                                     ' val_loss: {} val_mae: {}').format(
+                                         global_step_vl,
+                                         train_loss, train_mae,
+                                         val_loss, val_mae))
+    
+                val_writer.add_summary(summary_val, global_step=global_step_vl)
+                val_writer.flush()
+    
+                save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
+                tf.logging.info('train(): Model checkpoint saved to %s' % save_path)
+        
+            train_writer.close()
+            val_writer.close()
+
+        except RuntimeError as err:
+            tf.logging.error(err.args)
 
     def test(self, checkpoint_dir=None):
 
@@ -110,7 +114,7 @@ class Trainer:
 
         # Check if test data is loaded
         if self.data_loader == None or int(self.config.testing_percentage) <= 0:
-            raise RuntimeError('No test data available!')
+            raise RuntimeError('No test data or testset set to 0%! Check JSON config')
         # Load test dataset
         self.data_loader.initialize_test(self.sess)
         maes = []

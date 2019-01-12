@@ -1,8 +1,6 @@
 import sys
 import pprint
 
-sys.path.extend(['..'])
-
 import tensorflow as tf
 
 from models.vggnet import Vgg16
