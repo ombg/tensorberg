@@ -105,12 +105,12 @@ class VggMod(AbstractRegressor):
 
             layer_name = 'conv1_1' 
             conv1_1, kernel, biases = layers.conv(centered_data, 3, 3, 64, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
 
             layer_name = 'conv1_2'
             conv1_2, kernel, biases = layers.conv(conv1_1, 3, 3, 64, 1, 1, 
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
 
             # pool1
@@ -124,12 +124,12 @@ class VggMod(AbstractRegressor):
 
             layer_name = 'conv2_1'
             conv2_1, kernel, biases = layers.conv(pool1, 3, 3, 128, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
 
             layer_name = 'conv2_2'
             conv2_2, kernel, biases = layers.conv(conv2_1, 3, 3, 128, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
 
             # pool2
@@ -142,17 +142,17 @@ class VggMod(AbstractRegressor):
 
             layer_name = 'conv3_1'
             conv3_1, kernel, biases = layers.conv(pool2, 3, 3, 256, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
 
             layer_name = 'conv3_2'
             conv3_2, kernel, biases = layers.conv(conv3_1, 3, 3, 256, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
 
             layer_name = 'conv3_3'
             conv3_3, kernel, biases = layers.conv(conv3_2, 3, 3, 256, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
             # pool3
             with tf.variable_scope('conv3_3') as scope:
@@ -164,17 +164,17 @@ class VggMod(AbstractRegressor):
 
             layer_name = 'conv4_1'
             conv4_1, kernel, biases = layers.conv(pool3, 3, 3, 512, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
 
             layer_name = 'conv4_2'
             conv4_2, kernel, biases = layers.conv(conv4_1, 3, 3, 512, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
 
             layer_name = 'conv4_3'
             conv4_3, kernel, biases = layers.conv(conv4_2, 3, 3, 512, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
             # pool4
             with tf.variable_scope('conv4_3') as scope:
@@ -186,17 +186,17 @@ class VggMod(AbstractRegressor):
 
             layer_name = 'conv5_1'
             conv5_1, kernel, biases = layers.conv(pool4, 3, 3, 512, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
 
             layer_name = 'conv5_2'
             conv5_2, kernel, biases = layers.conv(conv5_1, 3, 3, 512, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
 
             layer_name = 'conv5_3'
             conv5_3, kernel, biases = layers.conv(conv5_2, 3, 3, 512, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=False)
             self.parameters += [kernel, biases]
 
             concat_layer = tf.concat([pool3, pool4, conv5_3], axis=3)

@@ -55,7 +55,7 @@ def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
                                   shape=[filter_height, filter_width,
                                          input_channels, num_filters],
                                   initializer=tf.glorot_uniform_initializer(),
-                                  regularizer=tf.nn.l2_loss,
+                                  regularizer=None,
                                   trainable=trainable)
 
         biases = tf.get_variable(name='biases',
