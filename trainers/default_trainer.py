@@ -107,65 +107,71 @@ class Trainer:
 
     def test(self, checkpoint_dir=None):
 
-        # Load parameters
-        if checkpoint_dir != None:
-            saver = tf.train.Saver()
-            saver.restore(self.sess, checkpoint_dir)
-
-        # Check if test data is loaded
-        if self.data_loader == None or int(self.config.testing_percentage) <= 0:
-            raise RuntimeError('No test data or testset set to 0%! Check JSON config')
-        # Load test dataset
-        self.data_loader.initialize_test(self.sess)
-        maes = []
-        #num_classes = int(self.data_loader.test_dataset.output_shapes[1][1])
-        #confusion_matrix = np.zeros((num_classes, num_classes),dtype=int)
         try:
-            bn = 0
-            while True:
-                mae, prediction = self.sess.run([self.model.mae, self.model.prediction])
-                tf.logging.info('Per batch Mean Absolute Error: {}'.format(mae))
-                maes.append(mae)
-                save_batch(
-                    prediction, 
-                    os.path.join(self.config.data_path_pred,'batch_{}'.format(bn)))
-                bn += 1
-        except tf.errors.OutOfRangeError:
-            pass
-        #accuracies = np.asarray(accuracies)
-        tf.logging.info('Average MAE of batch MAE: {} (std: {})'.format(
-                            np.mean(maes),
-                            np.std(maes)))
+            # Load parameters
+            if checkpoint_dir != None:
+                saver = tf.train.Saver()
+                saver.restore(self.sess, checkpoint_dir)
+
+            # Check if test data is loaded
+            if self.data_loader == None or int(self.config.testing_percentage) <= 0:
+                raise RuntimeError('No test data or testset set to 0%! Check JSON config')
+            # Load test dataset
+            self.data_loader.initialize_test(self.sess)
+            maes = []
+            #num_classes = int(self.data_loader.test_dataset.output_shapes[1][1])
+            #confusion_matrix = np.zeros((num_classes, num_classes),dtype=int)
+            try:
+                bn = 0
+                while True:
+                    mae, prediction = self.sess.run([self.model.mae, self.model.prediction])
+                    tf.logging.info('Per batch Mean Absolute Error: {}'.format(mae))
+                    maes.append(mae)
+                    save_batch(
+                        prediction, 
+                        os.path.join(self.config.data_path_pred,'batch_{}'.format(bn)))
+                    bn += 1
+            except tf.errors.OutOfRangeError:
+                pass
+            #accuracies = np.asarray(accuracies)
+            tf.logging.info('Average MAE of batch MAE: {} (std: {})'.format(
+                                np.mean(maes),
+                                np.std(maes)))
+        except RuntimeError as err:
+            tf.logging.error(err.args)
 
     def predict(self, image_path, num_images=1):
-        if num_images == 1:
-            img1 = imread(image_path, mode='RGB')
-            img1 = imresize(img1, (224, 224))
-        else:
-            raise NotImplementedError('Only the prediction of exactly one image is supported.')
+        try:
+            if num_images == 1:
+                img1 = imread(image_path, mode='RGB')
+                img1 = imresize(img1, (224, 224))
+            else:
+                raise NotImplementedError('Only the prediction of exactly one image is supported.')
 
-        prob = self.sess.run(self.model.softmax,
-                                feed_dict={self.model.data: [img1]})[0]
-        preds = (np.argsort(prob)[::-1])[0:5]
-        for p in preds:
-            print(class_names[p], prob[p])
+            prob = self.sess.run(self.model.softmax,
+                                    feed_dict={self.model.data: [img1]})[0]
+            preds = (np.argsort(prob)[::-1])[0:5]
+            for p in preds:
+                print(class_names[p], prob[p])
+        except NotImplementedError as err:
+            tf.logging.error(err.args)
 
     def create_bottlenecks(self, subset):
-        if self.data_loader == None:
-            raise RuntimeError('No data loaded')
-        tf.logging.info('Creating bottlenecks at ' + self.config.bottleneck_dir)
-        global_step = tf.train.get_or_create_global_step()
-        # Load dataset
-        if subset == 'training':
-            self.data_loader.initialize_train(self.sess)
-            tf.logging.info('Reading training subset!')
-        elif subset == 'validation':
-            self.data_loader.initialize_val(self.sess)
-            tf.logging.info('Reading validation subset!')
-        else:
-            raise NotImplementedError('subset must be either \'training\' or \'validation\'')
-
         try:
+            if self.data_loader == None:
+                raise RuntimeError('No data loaded')
+            tf.logging.info('Creating bottlenecks at ' + self.config.bottleneck_dir)
+            global_step = tf.train.get_or_create_global_step()
+            # Load dataset
+            if subset == 'training':
+                self.data_loader.initialize_train(self.sess)
+                tf.logging.info('Reading training subset!')
+            elif subset == 'validation':
+                self.data_loader.initialize_val(self.sess)
+                tf.logging.info('Reading validation subset!')
+            else:
+                raise NotImplementedError('subset must be either \'training\' or \'validation\'')
+
             bottleneck_paths = self.data_loader.get_bottleneck_filenames(
                                                     self.config.bottleneck_dir,   
                                                     subset=subset)
@@ -181,5 +187,9 @@ class Trainer:
 
         except KeyError:
             tf.logging.error('Bottlenecks not created.')
-        except OSError as e:
-            print(e)
+        except OSError as err:
+            tf.logging.error(err.args)
+        except RuntimeError as err:
+            tf.logging.error(err.args)
+        except NotImplementedError as err:
+            tf.logging.error(err.args)
