@@ -45,16 +45,16 @@ class AbstractRegressor(ABC):
             Compute data loss and regularization loss
             """
             with tf.name_scope('loss'):
-                data_loss = tf.losses.mean_squared_error(
-                                    labels=self.gt_map,
-                                    predictions=self.prediction)
+                data_loss = 1e2 * tf.losses.mean_squared_error(
+                                                labels=self.gt_map,
+                                                predictions=self.prediction)
                 reg_loss = tf.losses.get_regularization_loss()
                 self._loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
                 tf.summary.scalar('data_loss', data_loss)
                 tf.summary.scalar('reg_loss', reg_loss)
                 tf.summary.scalar('total_loss', self._loss)
-                tf.summary.image('gt_map', self.gt_map, max_outputs=3)
-                tf.summary.image('prediction', self.prediction, max_outputs=3)
+                tf.summary.image('gt_map', self.gt_map, max_outputs=1)
+                tf.summary.image('prediction', self.prediction, max_outputs=1)
         return self._loss
 
     @property
@@ -76,7 +76,6 @@ class AbstractRegressor(ABC):
                                gt_count_batch,
                                pred_count_batch)))
                 tf.summary.scalar('mean_absolut_error', self._mae)
-                tf.summary.scalar('gt_count', gt_count_batch[0])
                 tf.summary.scalar('pred_count', pred_count_batch[0] )
         return self._mae
 
@@ -209,8 +208,8 @@ class VggMod(AbstractRegressor):
             self.parameters += [kernel, biases]
             layer_name = 'conv7'
             conv7, kernel, biases = layers.conv(conv6, 1, 1, 1, 1, 1,
-                                                  name=layer_name, trainable=True)
+                                                  name=layer_name, trainable=True,
+                                                  log_weights=True)
             conv7_relu = tf.nn.leaky_relu(conv7, alpha=0.01, name='conv7_relu')
-            #conv5_3_mean = tf.reduce_mean(conv5_3, axis=3, keepdims=True)
             self._prediction = conv7_relu
         return self._prediction

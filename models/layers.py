@@ -38,7 +38,7 @@ def fc(x, num_in, units, name, relu=True, force_alloc=False):
         return act, weights, biases
 
 def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
-         padding='SAME', trainable=True):
+         padding='SAME', trainable=True, log_weights=False):
     """Create a convolution layer.
 
     Adapted from: https://github.com/ethereon/caffe-tensorflow
@@ -51,11 +51,13 @@ def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
 
     with tf.variable_scope(name) as scope:
 
+        regularizer = tf.contrib.layers.l2_regularizer(scale=0.01)
+
         weights = tf.get_variable(name='weights',
                                   shape=[filter_height, filter_width,
                                          input_channels, num_filters],
                                   initializer=tf.glorot_uniform_initializer(),
-                                  regularizer=tf.nn.l2_loss,
+                                  regularizer=regularizer,
                                   trainable=trainable)
 
         biases = tf.get_variable(name='biases',
@@ -70,5 +72,10 @@ def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
 
         # Apply relu function
         out = tf.nn.relu(out, name=scope.name)
+
+        if log_weights == True:
+            tf.summary.image('weights', weights[tf.newaxis,:,:,0,0,tf.newaxis])
+            tf.summary.histogram('weights', weights)
+            tf.summary.histogram('biases', biases)
 
     return out, weights, biases
