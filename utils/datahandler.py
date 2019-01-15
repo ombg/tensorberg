@@ -114,10 +114,16 @@ class AbstractDatasetLoader(ABC):
 
 
     def initialize_train(self, sess):
+        if self.config.is_training.lower() != 'true':
+            raise RuntimeError('is_training flag set to False')
         sess.run(self.training_init_op)
     def initialize_val(self, sess):
+        if int(self.config.validation_percentage) <= 0:
+            raise RuntimeError('Validation set is set to 0%')
         sess.run(self.val_init_op)
     def initialize_test(self, sess):
+        if int(self.config.testing_percentage) <= 0:
+            raise RuntimeError('Test set is set to 0%')
         sess.run(self.test_init_op)
     def get_input(self):
         return self.iterator.get_next()

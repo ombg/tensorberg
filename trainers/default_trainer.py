@@ -99,11 +99,12 @@ class Trainer:
                 save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
                 tf.logging.info('train(): Model checkpoint saved to %s' % save_path)
         
-            train_writer.close()
-            val_writer.close()
-
         except RuntimeError as err:
             tf.logging.error(err.args)
+
+        train_writer.close()
+        val_writer.close()
+
 
     def test(self, checkpoint_dir=None):
 
