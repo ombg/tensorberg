@@ -89,11 +89,15 @@ class AbstractNet(ABC):
             tf.summary.histogram('softmax', self._softmax)
         return self._cm
 
-    def load_weights_from_numpy(self, weight_file, sess):
-        tf.logging.info('Loading pre-trained weights...')
-        weights = np.load(weight_file)
-        keys = sorted(weights.keys())
-        for i, k in enumerate(keys):
+    def load_weights_from_numpy(self, weights_file, sess, weights_to_load=None):
+        weights = np.load(weights_file)
+
+        if weights_to_load == None:
+            weights_to_load = sorted(weights.keys())
+
+        assert isinstance(weights_to_load, list)
+        for i, k in enumerate(weights_to_load):
+            assert isinstance(k, str)
             sess.run(self.parameters[i].assign(weights[k]))
 
 class FullyConnectedNet(AbstractNet):
