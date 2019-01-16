@@ -5,7 +5,7 @@ import pprint
 import tensorflow as tf
 
 from models.regression import VggMod
-from trainers.default_trainer import Trainer
+from trainers.default_trainer import RegressionTrainer
 
 from utils.datahandler import RegressionDatasetLoader
 from utils.data_utils import load_image_and_blur, parse_png
@@ -18,7 +18,6 @@ def main():
     # then process the json configration file
     args = get_args()
     config = process_config(args.config)
-
 
     # create tensorflow session
     sess = tf.Session()
@@ -38,7 +37,7 @@ def main():
 
     # Trainer loops over the data using the model
     tf.logging.info('Initialize model...')
-    trainer = Trainer(sess, model, config, data_loader=image_data)
+    trainer = RegressionTrainer(sess, model, config, data_loader=image_data)
 
     keys = ['conv1_1_W', 'conv1_1_b', 'conv1_2_W', 'conv1_2_b',
             'conv2_1_W', 'conv2_1_b', 'conv2_2_W', 'conv2_2_b',

@@ -8,6 +8,7 @@ from imageio import imread
 from skimage.transform import resize
 from utils import datahandler
 from tqdm import tqdm
+from abc import ABC, abstractmethod
 
 from tensorflow.python import debug as tf_debug
 
@@ -20,7 +21,7 @@ def save_batch(data_batch, path_name):
     for i in range(data_batch.shape[0]):
         np.save(os.path.join(path_name,'pred_{}.npy'.format(i)), data_batch[i])
 
-class Trainer:
+class Trainer(ABC):
     def __init__(self, sess, model, config, data_loader=None):
         """
         Constructing the trainer
@@ -39,6 +40,10 @@ class Trainer:
         self.write_op = tf.summary.merge_all()
         self.init = tf.global_variables_initializer()
         self.sess.run(self.init)
+
+    @abstractmethod
+    def _test_loop(self):
+        pass
 
     def train(self):
         try:
@@ -99,11 +104,24 @@ class Trainer:
                 save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
                 tf.logging.info('train(): Model checkpoint saved to %s' % save_path)
         
+            train_writer.close()
+            val_writer.close()
+
         except RuntimeError as err:
             tf.logging.error(err.args)
+            try:
+                train_writer
+            except NameError:
+                pass
+            else:
+                train_writer.close()
+            try:
+                val_writer
+            except NameError:
+                pass
+            else:
+                val_writer.close()
 
-        train_writer.close()
-        val_writer.close()
 
 
     def test(self, checkpoint_dir=None):
@@ -119,25 +137,7 @@ class Trainer:
                 raise RuntimeError('No test data or testset set to 0%! Check JSON config')
             # Load test dataset
             self.data_loader.initialize_test(self.sess)
-            maes = []
-            #num_classes = int(self.data_loader.test_dataset.output_shapes[1][1])
-            #confusion_matrix = np.zeros((num_classes, num_classes),dtype=int)
-            try:
-                bn = 0
-                while True:
-                    mae, prediction = self.sess.run([self.model.mae, self.model.prediction])
-                    tf.logging.info('Per batch Mean Absolute Error: {}'.format(mae))
-                    maes.append(mae)
-                    save_batch(
-                        prediction, 
-                        os.path.join(self.config.data_path_pred,'batch_{}'.format(bn)))
-                    bn += 1
-            except tf.errors.OutOfRangeError:
-                pass
-            #accuracies = np.asarray(accuracies)
-            tf.logging.info('Average MAE of batch MAE: {} (std: {})'.format(
-                                np.mean(maes),
-                                np.std(maes)))
+            self._test_loop()
         except RuntimeError as err:
             tf.logging.error(err.args)
 
@@ -188,3 +188,45 @@ class Trainer:
             tf.logging.error('Bottlenecks not created.')
         except (OSError, RuntimeError, NotImplementedError) as err:
             tf.logging.error(err.args)
+
+class RegressionTrainer(Trainer):
+
+    def _test_loop(self):
+        maes = []
+        try:
+            bn = 0
+            while True:
+                mae, prediction = self.sess.run([self.model.mae, self.model.prediction])
+                tf.logging.info('Per batch Mean Absolute Error: {}'.format(mae))
+                maes.append(mae)
+                save_batch(
+                    prediction, 
+                    os.path.join(self.config.data_path_pred,'batch_{}'.format(bn)))
+                bn += 1
+        except tf.errors.OutOfRangeError:
+            pass
+        tf.logging.info('Average MAE of batch MAE: {} (std: {})'.format(
+                            np.mean(maes),
+                            np.std(maes)))
+
+class ClassificationTrainer(Trainer):
+
+    def _test_loop(self):
+        accuracies = []
+        num_classes = int(self.data_loader.test_dataset.output_shapes[1][1])
+        confusion_matrix = np.zeros((num_classes, num_classes),dtype=int)
+        try:
+            while True:
+                fetches = [self.model.cm, self.model.accuracy]
+                # Gets matrix [batch_size x num_classes] predictions
+                cm, acc = self.sess.run(fetches)
+                tf.logging.info('Per batch average test_acc: {:5.2f}%'.format(acc * 100.0))
+                accuracies.append(acc)
+                confusion_matrix += cm
+        except tf.errors.OutOfRangeError:
+            pass
+        accuracies = np.asarray(accuracies)
+        tf.logging.info('Average accuracy of batch accuracies: {:5.2f}% (std: {})'.format(
+                            np.mean(accuracies) * 100.0,
+                            np.std(accuracies)))
+        tf.logging.info('Confusion matrix:\n{}'.format(confusion_matrix))
