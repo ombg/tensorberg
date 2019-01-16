@@ -4,7 +4,8 @@ import os
 sys.path.extend(['..'])
 import tensorflow as tf
 import numpy as np
-from scipy.misc import imread, imresize
+from imageio import imread
+from skimage.transform import resize
 from utils import datahandler
 from tqdm import tqdm
 
@@ -58,7 +59,6 @@ class Trainer:
                 self.config.summary_dir + 'run_' + str(train_id) + '/val', self.sess.graph)
         
             tf.logging.info('train(): Training for {} epochs...'.format(self.config.num_epochs))
-            #self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
             for i in range(self.config.num_epochs):
                 tf.logging.info('train(): ===== EPOCH {} ====='.format(i))
                 # Initialize iterator with training data
@@ -143,18 +143,16 @@ class Trainer:
 
     def predict(self, image_path, num_images=1):
         try:
-            if num_images == 1:
-                img1 = imread(image_path, mode='RGB')
-                img1 = imresize(img1, (224, 224))
-            else:
-                raise NotImplementedError('Only the prediction of exactly one image is supported.')
+            img1 = imread(image_path, format='RGB')
+            img1 = resize(img1, (224, 224))
 
             prob = self.sess.run(self.model.softmax,
                                     feed_dict={self.model.data: [img1]})[0]
             preds = (np.argsort(prob)[::-1])[0:5]
             for p in preds:
                 print(class_names[p], prob[p])
-        except NotImplementedError as err:
+
+        except (FileNotFoundError, OSError) as err:
             tf.logging.error(err.args)
 
     def create_bottlenecks(self, subset):
@@ -188,9 +186,5 @@ class Trainer:
 
         except KeyError:
             tf.logging.error('Bottlenecks not created.')
-        except OSError as err:
-            tf.logging.error(err.args)
-        except RuntimeError as err:
-            tf.logging.error(err.args)
-        except NotImplementedError as err:
+        except (OSError, RuntimeError, NotImplementedError) as err:
             tf.logging.error(err.args)

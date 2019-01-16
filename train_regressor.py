@@ -45,10 +45,11 @@ def main():
             'conv3_1_W', 'conv3_1_b', 'conv3_2_W', 'conv3_2_b', 'conv3_3_W', 'conv3_3_b',
             'conv4_1_W', 'conv4_1_b', 'conv4_2_W', 'conv4_2_b', 'conv4_3_W', 'conv4_3_b',
             'conv5_1_W', 'conv5_1_b', 'conv5_2_W', 'conv5_2_b', 'conv5_3_W', 'conv5_3_b']
-    #tf.logging.info('Loading model parameters...')
-    #model.load_weights_from_numpy(config.weights_file,
-    #                              sess,
-    #                              weights_to_load=keys)
+
+    tf.logging.info('Loading model parameters...')
+    model.load_weights_from_numpy(config.weights_file,
+                                  sess,
+                                  weights_to_load=keys)
 
     tf.logging.info('Starting training now...')
     trainer.train()
