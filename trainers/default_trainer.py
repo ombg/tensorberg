@@ -184,8 +184,9 @@ class Trainer(ABC):
                 with open(bn_path, 'w') as bottleneck_file:
                     bottleneck_file.write(bottleneck_string)
 
-        except KeyError:
-            tf.logging.error('Bottlenecks not created.')
+        except KeyError as err:
+            tf.logging.error(err.args)
+            tf.logging.error('Check if bottlenecks have been created.')
         except (OSError, RuntimeError, NotImplementedError) as err:
             tf.logging.error(err.args)
 
