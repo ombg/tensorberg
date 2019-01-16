@@ -4,7 +4,7 @@ import pprint
 import tensorflow as tf
 
 from models.classification import FullyConnectedNet
-from trainers.default_trainer import Trainer
+from trainers.default_trainer import ClassificationTrainer
 
 from utils.datahandler import DirectoryDatasetLoader
 from utils.config import process_config
@@ -16,13 +16,8 @@ from utils.data_utils import parse_txt
 def main():
     # capture the config path from the run arguments
     # then process the json configration file and print it
-    try:
-        args = get_args()
-        config = process_config(args.config)
-
-    except Exception as e:
-        tf.logging.error("missing or invalid arguments %s" % e)
-        raise SystemExit
+    args = get_args()
+    config = process_config(args.config)
 
     # create tensorflow session
     sess = tf.Session()
@@ -41,7 +36,10 @@ def main():
     model.build_graph()
 
     # Trainer loops over the data using the model
-    trainer = Trainer(sess, model, config, data_loader=bottlenecks_loader)
+    trainer = ClassificationTrainer(sess,
+                                    model,
+                                    config,
+                                    data_loader=bottlenecks_loader)
 
     trainer.train()
     trainer.test()
