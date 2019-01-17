@@ -192,13 +192,13 @@ class DatasetLoaderClassifier(AbstractDatasetLoader):
 
     def load_datasets(self, process_func, do_shuffle=True, train_repetitions=-1):
 
-        samples_list, labels_list = get_files_from_ord_dict(self.image_lists,
-                                                    self.config.data_path,
-                                                    subset='training')
-        self.num_samples = len(samples_list)
-        self.num_batches = self.num_samples // self.config.batch_size
-
         if self.config.is_training.lower() == 'true':
+            samples_list, labels_list = get_files_from_ord_dict(self.image_lists,
+                                                        self.config.data_path,
+                                                        subset='training')
+            self.num_samples = len(samples_list)
+            self.num_batches = self.num_samples // self.config.batch_size
+
             self.train_dataset = dset_from_lists(samples_list,
                                              labels_list,
                                              process_func,
@@ -237,7 +237,7 @@ class FileListDatasetLoader(DatasetLoaderClassifier):
     def __init__(self, config):
         super().__init__(config)
 
-    def create_file_lists(self):
+    def _create_file_lists(self):
         """Builds a list of training samples from a txt file.
       
         It parses the txt file. The txt file contains full paths to files and
@@ -337,7 +337,7 @@ class DirectoryDatasetLoader(DatasetLoaderClassifier):
     def __init__(self, config):
         super().__init__(config)
 
-    def create_file_lists(self):
+    def _create_file_lists(self):
         """Builds a list of training samples from the file system.
       
         Analyzes the sub folders in the image directory, splits them into stable
