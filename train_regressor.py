@@ -10,7 +10,7 @@ from trainers.default_trainer import RegressionTrainer
 from utils.datahandler import RegressionDatasetLoader
 from utils.data_utils import load_image_and_blur, parse_png
 from utils.config import process_config
-from utils.utils import get_args
+from utils.general_utils import get_args
 
 
 def main():
