@@ -1,96 +1,29 @@
-"""
-This class will contain different loaders for cifar 100 dataset
-# Techniques
-# FIT in ram
-# - load numpys in the graph - Cifar100DataLoaderNumpy
-# - generator python - BaselineCifar100Loader
+from abc import ABC, abstractmethod
+import os
+from random import shuffle
+import collections
+import hashlib
+import re
+import numpy as np
+import tensorflow as tf
 
-# Doesn't fit in ram
-# - load files but in tfrecords format - Cifar100TFRecord
-# - load files from disk using dataset api - Cifar100IMGLoader
-
-Supports IMGDB4 and CIFAR dataset
-"""
 from utils import data_utils
 from ompy import fileio, ml
 
-from abc import ABC, abstractmethod
-from random import shuffle
-import collections
-import os
-import hashlib
-import re
-import tensorflow as tf
-import numpy as np
-
 MAX_NUM_IMAGES_PER_CLASS = 2 ** 27 - 1  # ~134M
-
-class ImgdbLoader:
-    """
-    Loads IMGDB dataset using TensorFlow-Dataset API
-    """
-    def __init__(self,config):
-        print('Loading data...')
-        self.config = config
-        # Load data as numpy array
-        data = data_utils.get_some_data(
-            self.config.data_path,
-            dataset_name=self.config.dataset_name,
-            img_shape=(224, 224, 3),
-            normalize_data=False,
-            subtract_mean=False,
-            channels_first=False,
-            flatten_imgs=False)
-
-        data_utils.print_shape(data)
-        X_train, y_train, X_val, y_val, X_test, y_test = data
-#        #DEBUG - small subset to provoke overfitting
-#        idx_overfit=np.random.choice(len(X_train),size=256,replace=False)
-#        X_train= X_train[idx_overfit]
-#        y_train= y_train[idx_overfit]
-        self.num_batches = len(X_train) // self.config.batch_size
-
-        self.train_dataset = self._from_numpy(X_train, y_train)
-        self.val_dataset = self._from_numpy(X_val, y_val)
-        self.test_dataset = self._from_numpy(X_test, y_test)
-
-        self.iterator = tf.data.Iterator.from_structure(self.train_dataset.output_types,
-                                                   self.train_dataset.output_shapes)
-
-        self.training_init_op = self.iterator.make_initializer(self.train_dataset)
-        self.val_init_op = self.iterator.make_initializer(self.val_dataset)
-        self.test_init_op = self.iterator.make_initializer(self.test_dataset)
-
-    def _from_numpy(self, X, y):
-        #TODO Improve using this guide:
-        # https://www.tensorflow.org/guide/datasets#consuming_numpy_arrays
-        num_classes = len(np.unique(y))
-        dset_x = tf.data.Dataset.from_tensor_slices(X)
-        dset_y = tf.data.Dataset.from_tensor_slices(y).map(
-            lambda z: tf.one_hot(z, num_classes))
-        dset = tf.data.Dataset.zip((dset_x, dset_y))
-        dset = dset.shuffle(buffer_size=len(X))
-        dset = dset.repeat(1).batch(self.config.batch_size)
-        return dset
-
-
-    def initialize_train(self, sess):
-        sess.run(self.training_init_op)
-    def initialize_val(self, sess):
-        sess.run(self.val_init_op)
-    def initialize_test(self, sess):
-        sess.run(self.test_init_op)
-    def get_input(self):
-        return self.iterator.get_next()
-
+import pdb
 class AbstractDatasetLoader(ABC):
     def __init__(self, config):
+        pdb.set_trace()
         self.config = config
-        self.image_lists = self._create_file_lists()
         self.iterator = None
+        self.train_dataset = None
+        self.val_dataset = None
+        self.test_dataset = None
+        self.image_lists = self._create_file_lists()
 
     @abstractmethod
-    def _create_file_lists():
+    def _create_file_lists(self):
         pass
 
     def _get_iterator(self, dset):
@@ -115,7 +48,7 @@ class AbstractDatasetLoader(ABC):
 
     def initialize_train(self, sess):
         if self.config.is_training.lower() != 'true':
-            raise RuntimeError('is_training flag set to False')
+            raise RuntimeError('is_training flag is not set to true')
         sess.run(self.training_init_op)
     def initialize_val(self, sess):
         if int(self.config.validation_percentage) <= 0:
@@ -189,6 +122,8 @@ class RegressionDatasetLoader(AbstractDatasetLoader):
 class DatasetLoaderClassifier(AbstractDatasetLoader):
     def __init__(self, config):
         super().__init__(config)
+        self.num_samples = None
+        self.num_batches = None
 
     def load_datasets(self, process_func, do_shuffle=True, train_repetitions=-1):
 
@@ -259,7 +194,7 @@ class FileListDatasetLoader(DatasetLoaderClassifier):
         file_list, label_list = fileio.parse_imgdb_list(self.config.data_path)
         
         try:
-            class_names = __import__('utils.crowdnet_classes', fromlist=['class_names'])
+            class_names = __import__('configs.crowdnet_classes', fromlist=['class_names'])
             class_names = class_names.class_names
             #__import__(class_names, fromlist=[crowdnet_classes])
         except ImportError:

@@ -8,25 +8,30 @@ class FileListDatasetLoaderTestCase(unittest.TestCase):
         import json
         testcase_config_filename = '/tmp/testcase_config.json'
         testcase_config = {
-            "input_path": "testing.txt",
-            "testing_percentage": "10",
+            "data_path":"utils/testing.txt",
+            "data_path_samples":"/tmp/in_dir/images",
+            "data_path_gt":"/tmp/in_dir/maps",
+            "data_path_pred":"/tmp/in_dir/pred_maps",
+            "is_training": "False",
             "validation_percentage": "10",
+            "testing_percentage": "10",
             "weights_file": "/tmp/vgg16_weights.npz",
-            "dataset_name": "imgdb",
-            "exp_name": "imgdb_vgg16_fc2_4096_cl4_dr_0.1",
-            "work_dir": "dummy",
-            "checkpoint_to_restore": "dummy",
-            "num_epochs": 1,
+            "dataset_name": "crowd_maps",
+            "work_dir": "/tmp/work_dir/",
+            "exp_name": "crowdnetreg_debug",
+            "checkpoint_to_restore": "no_restore",
+            "num_epochs": 20,
             "learning_rate": 0.001,
-            "batch_size": 1,
+            "batch_size": 10,
             "max_to_keep":5
         }
         with open(testcase_config_filename, 'w') as f:
             json.dump(testcase_config, f)
         testcase_config_reloaded = config.process_config(testcase_config_filename)
-        self.dsetsloader = FileListDatasetLoader(testcase_config_reloaded)
+        self.dsetsloader = datahandler.FileListDatasetLoader(testcase_config_reloaded)
         
     def test_create_file_lists(self):
+        #self.maxDiff=None
         self.assertDictEqual(
             self.dsetsloader.image_lists,
             testdata.gold_result)
