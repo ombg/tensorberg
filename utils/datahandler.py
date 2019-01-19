@@ -62,7 +62,11 @@ class AbstractDatasetLoader(ABC):
         sess.run(self.test_init_op)
 
     def get_input(self):
-        return self.iterator.get_next()
+        try:
+            next_itr = self.iterator.get_next()
+            return next_itr
+        except tf.errors.OutOfRangeError:
+            pass
         
 class TFRecordDatasetLoader(AbstractDatasetLoader):
 
@@ -74,6 +78,7 @@ class TFRecordDatasetLoader(AbstractDatasetLoader):
         try:
             if self.config.is_training.lower() == 'true':
                 self.train_dataset = dset_from_tfrecord(cifar.get_data_path(self.config,'training'),
+                                                        max_samples=32,
                                                         batch_size=self.config.batch_size,
                                                         do_shuffle=do_shuffle,
                                                         use_distortion=True,

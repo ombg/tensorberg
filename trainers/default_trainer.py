@@ -83,8 +83,11 @@ class Trainer(ABC):
                 self.data_loader.initialize_train(self.sess)
                 tf.logging.info('Initial loss: {}'.format(self.sess.run(self.model.loss)))
                 #Do not monitor, just train for one epoch
-                for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
-                    self.sess.run([self.model.optimize])
+                try:
+                    for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
+                        self.sess.run([self.model.optimize])
+                except tf.errors.OutOfRangeError as err:
+                    tf.logging.warning(err.args)
         
                 # Monitor the training after every epoch
                 fetches = self._get_monitor_ops(extra_ops=[global_step])
