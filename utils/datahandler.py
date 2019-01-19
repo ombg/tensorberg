@@ -11,19 +11,20 @@ from utils import data_utils
 from ompy import fileio, ml
 
 MAX_NUM_IMAGES_PER_CLASS = 2 ** 27 - 1  # ~134M
-import pdb
+
 class AbstractDatasetLoader(ABC):
     def __init__(self, config):
-        pdb.set_trace()
         self.config = config
         self.iterator = None
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
-        self.image_lists = self._create_file_lists()
+        self.training_init_op = None
+        self.val_init_op = None
+        self.test_init_op = None
 
     @abstractmethod
-    def _create_file_lists(self):
+    def load_datasets(self, do_shuffle=True, train_repetitions=-1):
         pass
 
     def _get_iterator(self, dset):
@@ -58,13 +59,54 @@ class AbstractDatasetLoader(ABC):
         if int(self.config.testing_percentage) <= 0:
             raise RuntimeError('Test set is set to 0%')
         sess.run(self.test_init_op)
+
     def get_input(self):
         return self.iterator.get_next()
+        
+class TFRecordDatasetLoader(AbstractDatasetLoader):
+    num_samples_training = 45000
+    num_samples_validation = 5000 
+    num_samples_testing = 10000
 
+    def __init__(self, config):
+        super().__init__(config)
+
+    def load_datasets(self, do_shuffle=True, train_repetitions=-1):
+        try:
+            if self.config.is_training.lower() == 'true':
+                self.train_dataset = dset_from_tfrecord(get_data_path(config,'training'),
+                                                        batchsize=config.batch_size,
+                                                        do_shuffle=do_shuffle,
+                                                        use_distortion=True,
+                                                        repetitions=train_repetitions)
+    
+            if int(self.config.validation_percentage) > 0:
+                self.val_dataset = dset_from_tfrecord(get_data_path(config,'validation'),
+                                                        batchsize=config.batch_size,
+                                                        repetitions=train_repetitions)
+            if int(self.config.testing_percentage) > 0:
+                self.train_dataset = dset_from_tfrecord(get_data_path(config,'testing'),
+                                                        batchsize=config.batch_size,
+                                                        repetitions=1)
+            self._create_iterators()
+        except IndexError as err:
+            tf.logging.error(err.args)
+
+    @staticmethod
+    def get_data_path(config, subset):
+        if subset == 'training':
+            return os.path.join(config.data_path,'train.tfrecords')
+        elif subset == 'validation':
+            return os.path.join(config.data_path,'validation.tfrecords')
+        elif subset == 'testing':
+            return os.path.join(config.data_path,'eval.tfrecords')
+        else:
+            raise ValueError('Invalid data subset "%s"' % subset)
 
 class RegressionDatasetLoader(AbstractDatasetLoader):
     def __init__(self, config, process_images, process_maps):
         super().__init__(config)
+        self.image_lists = self._create_file_lists()
         self.process_images = process_images
         self.process_maps = process_maps
 
@@ -122,6 +164,7 @@ class RegressionDatasetLoader(AbstractDatasetLoader):
 class DatasetLoaderClassifier(AbstractDatasetLoader):
     def __init__(self, config):
         super().__init__(config)
+        self.image_lists = self._create_file_lists()
         self.num_samples = None
         self.num_batches = None
 
@@ -467,6 +510,29 @@ def dset_from_image_pair(image_pairs,
         dset = dset.shuffle(4000)
 
     dset = dset.repeat(repetitions).batch(batch_size)
+    return dset
+
+def dset_from_tfrecord(tfrecord_file,
+                       batch_size=64,
+                       do_shuffle=False,
+                       use_distortion=False,
+                       repetitions=-1):
+
+    dset = tf.data.TFRecordDataset(tfrecord_file).repeat(repetitions)
+
+    #TODO
+    dset = dset.map(data_utils.parse_tf_example, num_parallel_calls=batch_size)
+    if use_distortion:
+        dset = dset.map(data_utils.distort_image, num_parallel_calls=batch_size)
+
+    #TODO Only during training? Best buffer size?
+    if do_shuffle:
+        min_queue_examples = int(TFRecordDatasetLoader.num_samples_training * 0.4)
+        # Ensure that the capacity is sufficiently large to provide good random
+        # shuffling.
+        dset = dset.shuffle(buffer_size=min_queue_examples + 3 * batch_size)
+
+    dset = dset.batch(batch_size)
     return dset
 
 def get_IMGDB_dataset(img_list_filename,

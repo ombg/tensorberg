@@ -15,6 +15,14 @@ import platform
 from ompy import fileio
 from ompy import ml
 
+CIFAR_HEIGHT = 32
+CIFAR_WIDTH = 32
+CIFAR_DEPTH = 3
+
+"""Size of distorted image"""
+RESIZE_TARGET_HEIGHT = 40
+RESIZE_TARGET_WIDTH = 40
+
 def load_image_and_blur(filename):
     image = cv2.imread(filename.decode(), 0)
     image = dilation(image)  # [0,0,255,0,0] => [0,255,255,255,0]
@@ -38,6 +46,41 @@ def parse_png(filename):
     image_decoded = tf.image.decode_png(image_string, channels=3)
     image_resized = tf.image.resize_images(image_decoded, [448, 448])
     return image_resized
+
+def parse_tf_example(serialized_example):
+    """Parses a single tf.Example into image and label tensors."""
+    # Dimensions of the images in the CIFAR-10 dataset.
+    # See http://www.cs.toronto.edu/~kriz/cifar.html for a description of the
+    # input format.
+    # Function copied and slightly modified from here:
+    # https://github.com/tensorflow/models/blob/e59b6a857a7c96534f79e1cb68e57d34f49c6d48/tutorials/image/cifar10_estimator/cifar10.py#L45
+    features = tf.parse_single_example(
+        serialized_example,
+        features={
+            'image': tf.FixedLenFeature([], tf.string),
+            'label': tf.FixedLenFeature([], tf.int64),
+        })
+    image = tf.decode_raw(features['image'], tf.uint8)
+    image.set_shape([CIFAR_DEPTH * CIFAR_HEIGHT * CIFAR_WIDTH])
+
+    # Reshape from [depth * height * width] to [depth, height, width].
+    image = tf.cast(
+        tf.transpose(tf.reshape(image, [CIFAR_DEPTH, CIFAR_HEIGHT, CIFAR_WIDTH]), [1, 2, 0]),
+        tf.float32)
+    label = tf.cast(features['label'], tf.int32)
+
+
+    return image, label
+
+def distort_image(image, label):
+    """Preprocess a single image in [height, width, depth] layout."""
+    # Pad 4 pixels on each dimension of feature map, done in mini-batch
+    image = tf.image.resize_image_with_crop_or_pad(image,
+                         RESIZE_TARGET_HEIGHT,
+                         RESIZE_TARGET_WIDTH)
+    image = tf.random_crop(image, [CIFAR_HEIGHT, CIFAR_WIDTH, CIFAR_DEPTH])
+    image = tf.image.random_flip_left_right(image)
+    return image, label
 
 def float_string_to_list(filename):
     """Converts a ascii list of float numbers to a python list of floats

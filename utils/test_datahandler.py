@@ -1,7 +1,10 @@
 import unittest
-from datahandler import FileListDatasetLoader
+import tensorflow as tf
+import datahandler
 import config
 import testdata
+
+import numpy as np
 
 class FileListDatasetLoaderTestCase(unittest.TestCase):
     def setUp(self):
@@ -41,6 +44,34 @@ class FileListDatasetLoaderTestCase(unittest.TestCase):
             f.write('{}'.format(self.dsetsloader.image_lists))
             f.write('\n\nGoldresult\n\n')
             f.write('{}'.format(testdata.gold_result))
+
+class TFRecordDatasetLoaderTestCase(tf.test.TestCase):
+
+    def setUp(self):
+        self.dset = datahandler.dset_from_tfrecord(
+                        '/tmp/cifar_tfrecord/train.tfrecords',
+                        do_shuffle=True,
+                        use_distortion=True,
+                        repetitions=-1)
+
+        self.iterator = self.dset.make_one_shot_iterator()
+        self.image_batch, self.label_batch = self.iterator.get_next()
+
+    def test_shape(self):
+        self.assertEqual(self.dset.output_types, (tf.float32, tf.int32))
+        img_batch_shape = self.dset.output_shapes[0].as_list()
+        label_batch_shape = self.dset.output_shapes[1].as_list()
+        self.assertEqual(img_batch_shape, [None,32,32,3])
+        self.assertEqual(label_batch_shape, [None,])
+
+    def test_dset_from_tfrecord(self):
+        """Test if `tf.data.Dataset` is loaded.
+        """
+        with self.test_session() as sess:
+            self.assertLess(tf.reduce_min(self.image_batch).eval(), 20.0)
+            self.assertGreater(tf.reduce_max(self.image_batch).eval(), 230.0)
+            self.assertAlmostEqual(tf.reduce_mean(self.image_batch).eval(),
+                                   127.0, delta=30.0)
 
 if __name__ == '__main__':
     unittest.main()
