@@ -58,11 +58,11 @@ class TFRecordDatasetLoaderTestCase(tf.test.TestCase):
         self.image_batch, self.label_batch = self.iterator.get_next()
 
     def test_shape(self):
-        self.assertEqual(self.dset.output_types, (tf.float32, tf.int32))
+        self.assertEqual(self.dset.output_types, (tf.float32, tf.float32))
         img_batch_shape = self.dset.output_shapes[0].as_list()
         label_batch_shape = self.dset.output_shapes[1].as_list()
         self.assertEqual(img_batch_shape, [None,32,32,3])
-        self.assertEqual(label_batch_shape, [None,])
+        self.assertEqual(label_batch_shape, [None, 10])
 
     def test_dset_from_tfrecord(self):
         """Test if `tf.data.Dataset` is loaded.

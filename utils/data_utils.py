@@ -12,16 +12,9 @@ from skimage.util import img_as_float32
 from skimage.morphology import dilation
 import platform
 
+from utils import cifar
 from ompy import fileio
 from ompy import ml
-
-CIFAR_HEIGHT = 32
-CIFAR_WIDTH = 32
-CIFAR_DEPTH = 3
-
-"""Size of distorted image"""
-RESIZE_TARGET_HEIGHT = 40
-RESIZE_TARGET_WIDTH = 40
 
 def load_image_and_blur(filename):
     image = cv2.imread(filename.decode(), 0)
@@ -61,14 +54,14 @@ def parse_tf_example(serialized_example):
             'label': tf.FixedLenFeature([], tf.int64),
         })
     image = tf.decode_raw(features['image'], tf.uint8)
-    image.set_shape([CIFAR_DEPTH * CIFAR_HEIGHT * CIFAR_WIDTH])
+    image.set_shape([cifar.DEPTH * cifar.HEIGHT * cifar.WIDTH])
 
     # Reshape from [depth * height * width] to [depth, height, width].
     image = tf.cast(
-        tf.transpose(tf.reshape(image, [CIFAR_DEPTH, CIFAR_HEIGHT, CIFAR_WIDTH]), [1, 2, 0]),
+        tf.transpose(tf.reshape(image, [cifar.DEPTH, cifar.HEIGHT, cifar.WIDTH]), [1, 2, 0]),
         tf.float32)
     label = tf.cast(features['label'], tf.int32)
-
+    label = tf.one_hot(indices=label, depth=cifar.NUM_CLASSES)
 
     return image, label
 
@@ -76,9 +69,9 @@ def distort_image(image, label):
     """Preprocess a single image in [height, width, depth] layout."""
     # Pad 4 pixels on each dimension of feature map, done in mini-batch
     image = tf.image.resize_image_with_crop_or_pad(image,
-                         RESIZE_TARGET_HEIGHT,
-                         RESIZE_TARGET_WIDTH)
-    image = tf.random_crop(image, [CIFAR_HEIGHT, CIFAR_WIDTH, CIFAR_DEPTH])
+                         cifar.RESIZE_TARGET_HEIGHT,
+                         cifar.RESIZE_TARGET_WIDTH)
+    image = tf.random_crop(image, [cifar.HEIGHT, cifar.WIDTH, cifar.DEPTH])
     image = tf.image.random_flip_left_right(image)
     return image, label
 

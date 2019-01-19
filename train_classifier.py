@@ -8,7 +8,7 @@ from trainers.default_trainer import ClassificationTrainer
 
 from utils.datahandler import TFRecordDatasetLoader
 from utils.config import process_config
-from utils.utils import get_args
+from utils.general_utils import get_args
 from utils.data_utils import parse_txt
 
 def main():

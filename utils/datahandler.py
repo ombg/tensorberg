@@ -7,6 +7,7 @@ import re
 import numpy as np
 import tensorflow as tf
 
+from utils import cifar
 from utils import data_utils
 from ompy import fileio, ml
 
@@ -64,44 +65,31 @@ class AbstractDatasetLoader(ABC):
         return self.iterator.get_next()
         
 class TFRecordDatasetLoader(AbstractDatasetLoader):
-    num_samples_training = 45000
-    num_samples_validation = 5000 
-    num_samples_testing = 10000
 
     def __init__(self, config):
         super().__init__(config)
+        self.num_batches = cifar.NUM_SAMPLES_TRAINING // self.config.batch_size
 
     def load_datasets(self, do_shuffle=True, train_repetitions=-1):
         try:
             if self.config.is_training.lower() == 'true':
-                self.train_dataset = dset_from_tfrecord(get_data_path(config,'training'),
-                                                        batchsize=config.batch_size,
+                self.train_dataset = dset_from_tfrecord(cifar.get_data_path(self.config,'training'),
+                                                        batch_size=self.config.batch_size,
                                                         do_shuffle=do_shuffle,
                                                         use_distortion=True,
                                                         repetitions=train_repetitions)
     
             if int(self.config.validation_percentage) > 0:
-                self.val_dataset = dset_from_tfrecord(get_data_path(config,'validation'),
-                                                        batchsize=config.batch_size,
+                self.val_dataset = dset_from_tfrecord(cifar.get_data_path(self.config,'validation'),
+                                                        batch_size=self.config.batch_size,
                                                         repetitions=train_repetitions)
             if int(self.config.testing_percentage) > 0:
-                self.train_dataset = dset_from_tfrecord(get_data_path(config,'testing'),
-                                                        batchsize=config.batch_size,
+                self.test_dataset = dset_from_tfrecord(cifar.get_data_path(self.config,'testing'),
+                                                        batch_size=self.config.batch_size,
                                                         repetitions=1)
             self._create_iterators()
         except IndexError as err:
             tf.logging.error(err.args)
-
-    @staticmethod
-    def get_data_path(config, subset):
-        if subset == 'training':
-            return os.path.join(config.data_path,'train.tfrecords')
-        elif subset == 'validation':
-            return os.path.join(config.data_path,'validation.tfrecords')
-        elif subset == 'testing':
-            return os.path.join(config.data_path,'eval.tfrecords')
-        else:
-            raise ValueError('Invalid data subset "%s"' % subset)
 
 class RegressionDatasetLoader(AbstractDatasetLoader):
     def __init__(self, config, process_images, process_maps):
@@ -513,6 +501,7 @@ def dset_from_image_pair(image_pairs,
     return dset
 
 def dset_from_tfrecord(tfrecord_file,
+                       max_samples=-1, 
                        batch_size=64,
                        do_shuffle=False,
                        use_distortion=False,
@@ -527,12 +516,16 @@ def dset_from_tfrecord(tfrecord_file,
 
     #TODO Only during training? Best buffer size?
     if do_shuffle:
-        min_queue_examples = int(TFRecordDatasetLoader.num_samples_training * 0.4)
+        min_queue_examples = int(cifar.NUM_SAMPLES_TRAINING * 0.4)
         # Ensure that the capacity is sufficiently large to provide good random
         # shuffling.
         dset = dset.shuffle(buffer_size=min_queue_examples + 3 * batch_size)
 
     dset = dset.batch(batch_size)
+        
+    # TODO Only take up to `max_samples` samples from the data.
+    dset = dset.take(max_samples)
+
     return dset
 
 def get_IMGDB_dataset(img_list_filename,

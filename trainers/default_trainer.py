@@ -51,7 +51,7 @@ class Trainer(ABC):
 
     @abstractmethod
     def _keep_printable_keys(d):
-    """Remove all non-printable dict entrys, and keep the rest"""
+        """Remove all non-printable dict entrys, and keep the rest"""
         pass
 
     @abstractmethod
@@ -102,8 +102,8 @@ class Trainer(ABC):
                                          global_step=val_output['global_step'])
                 val_writer.flush()
 
-                self._keep_printable_keys(train_output)
-                self._keep_printable_keys(val_output)
+                Trainer._keep_printable_keys(train_output)
+                Trainer._keep_printable_keys(val_output)
     
                 save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
                 tf.logging.info('train(): Model checkpoint saved to %s' % save_path)
@@ -211,13 +211,6 @@ class RegressionTrainer(Trainer):
                 'summary':summary,
                 'global_step':global_step}
 
-    def _keep_printable_keys(d):
-        try:
-            d.pop('summary')
-            d.pop('global_step')
-        except KeyError as err:
-            tf.logging.error(err.args)
-
     def _test_loop(self):
         maes = []
         try:
@@ -235,6 +228,15 @@ class RegressionTrainer(Trainer):
         tf.logging.info('Average MAE of batch MAE: {} (std: {})'.format(
                             np.mean(maes),
                             np.std(maes)))
+
+    @staticmethod
+    def _keep_printable_keys(d):
+        try:
+            d.pop('summary')
+            d.pop('global_step')
+        except KeyError as err:
+            tf.logging.error(err.args)
+
 
 class ClassificationTrainer(Trainer):
 
@@ -257,14 +259,6 @@ class ClassificationTrainer(Trainer):
                 'summary':summary,
                 'global_step':global_step}
 
-    def _keep_printable_keys(d):
-        try:
-            d.pop('summary')
-            d.pop('softmax')
-            d.pop('global_step')
-        except KeyError as err:
-            tf.logging.error(err.args)
-
     def _test_loop(self):
         accuracies = []
         num_classes = int(self.data_loader.test_dataset.output_shapes[1][1])
@@ -284,3 +278,13 @@ class ClassificationTrainer(Trainer):
                             np.mean(accuracies) * 100.0,
                             np.std(accuracies)))
         tf.logging.info('Confusion matrix:\n{}'.format(confusion_matrix))
+
+    @staticmethod
+    def _keep_printable_keys(d):
+        try:
+            d.pop('summary')
+            d.pop('softmax')
+            d.pop('global_step')
+        except KeyError as err:
+            tf.logging.error(err.args)
+

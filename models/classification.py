@@ -9,6 +9,7 @@ class AbstractNet(ABC):
 
         if data_loader != None:
             self.data, self.labels = data_loader.get_input()
+            self.num_classes = self.labels.get_shape()[1].value
         else:
             self.data = tf.placeholder(tf.float32, [None, 32, 32, 3])
             self.labels = tf.placeholder(tf.int32, [None])
@@ -27,12 +28,15 @@ class AbstractNet(ABC):
         self._softmax = None
         
     def build_graph(self):
-       self.prediction 
-       self.loss
-       self.softmax
-       self.cm
-       self.optimize
-       self.accuracy
+        try:
+            self.prediction 
+            self.loss
+            self.softmax
+            self.cm
+            self.optimize
+            self.accuracy
+        except MemoryError as err:
+            tf.logging.warning(err.args)
 
     @abstractmethod
     def prediction(self):
@@ -79,7 +83,7 @@ class AbstractNet(ABC):
         if self._cm == None:
             pred = tf.argmax(self.prediction, axis=1)
             lbl  = tf.argmax(self.labels, axis=1)
-            self._cm = tf.confusion_matrix(lbl, pred)
+            self._cm = tf.confusion_matrix(lbl, pred, num_classes=self.num_classes)
         return self._cm
 
     @property
@@ -101,6 +105,10 @@ class AbstractNet(ABC):
             sess.run(self.parameters[i].assign(weights[k]))
 
 class FullyConnectedNet(AbstractNet):
+    def __init__(self, config, data_loader=None):
+        super().__init__(config, data_loader=data_loader)
+        self.data = tf.layers.flatten(self.data)
+
     @property
     def prediction(self):
         if self._prediction == None:
@@ -126,7 +134,7 @@ class FullyConnectedNet(AbstractNet):
             layer_name = 'fc3'
             fc3l, fc3w, fc3b = layers.fc(fc2l,
                                          num_in=4096,
-                                         units=5,
+                                         units=10,
                                          name=layer_name,
                                          relu=False)
             self.parameters += [fc3w, fc3b]

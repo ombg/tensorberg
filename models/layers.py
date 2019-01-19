@@ -14,7 +14,7 @@ def fc(x, num_in, units, name, relu=True, force_alloc=False):
                            ' for a single weight matrix.'
                            ' If this is a good idea'
                            ' use `force_alloc=True`').format(int(3e8 * 4)))
-    with tf.variable_scope(name, reuse=tf.AUTO_REUSE) as scope:
+    with tf.variable_scope(name) as scope:
 
         # Create tf variables for the weights and biases
         weights = tf.get_variable(name='weights',
