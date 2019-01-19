@@ -42,6 +42,19 @@ class Trainer(ABC):
         self.sess.run(self.init)
 
     @abstractmethod
+    def _get_monitor_ops(self, extra_ops=[]):
+        pass
+
+    @abstractmethod
+    def _run_graph(self, fetches):
+        pass
+
+    @abstractmethod
+    def _keep_printable_keys(d):
+    """Remove all non-printable dict entrys, and keep the rest"""
+        pass
+
+    @abstractmethod
     def _test_loop(self):
         pass
 
@@ -74,32 +87,23 @@ class Trainer(ABC):
                     self.sess.run([self.model.optimize])
         
                 # Monitor the training after every epoch
-                fetches = [self.model.optimize,
-                           self.model.loss,
-                           self.model.mae,
-                           self.write_op,
-                           global_step]
-    
-                _,train_loss, train_mae, summary_train, global_step_vl = self.sess.run(fetches)
-                train_writer.add_summary(summary_train, global_step=global_step_vl)
+                fetches = self._get_monitor_ops(extra_ops=[global_step])
+                train_output = self._run_graph(fetches)
+                train_writer.add_summary(train_output['summary'],
+                                         global_step=train_output['global_step'])
                 train_writer.flush()
     
                 #Check how it goes with the validation set
                 self.data_loader.initialize_val(self.sess)
-                fetches_val = [self.model.loss,
-                               self.model.mae,
-                               self.write_op,
-                               global_step]
+                fetches = self._get_monitor_ops(extra_ops=[global_step])
+                val_output = self._run_graph(fetches)
     
-                val_loss, val_mae, summary_val, global_step_vl = self.sess.run(fetches_val)
-                tf.logging.info(('train(): #{}: train_loss: {} train_mae: {}' 
-                                     ' val_loss: {} val_mae: {}').format(
-                                         global_step_vl,
-                                         train_loss, train_mae,
-                                         val_loss, val_mae))
-    
-                val_writer.add_summary(summary_val, global_step=global_step_vl)
+                val_writer.add_summary(val_output['summary'],
+                                         global_step=val_output['global_step'])
                 val_writer.flush()
+
+                self._keep_printable_keys(train_output)
+                self._keep_printable_keys(val_output)
     
                 save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
                 tf.logging.info('train(): Model checkpoint saved to %s' % save_path)
@@ -192,6 +196,28 @@ class Trainer(ABC):
 
 class RegressionTrainer(Trainer):
 
+    def _get_monitor_ops(self, extra_ops=[]):
+        fetches = [self.model.loss,
+                   self.model.mae,
+                   self.write_op]
+        fetches.extend(extra_ops)
+        return fetches
+
+    def _run_graph(self, fetches):
+        loss, mae, summary, global_step = self.sess.run(fetches)
+
+        return {'loss':loss,
+                'mae':mae,
+                'summary':summary,
+                'global_step':global_step}
+
+    def _keep_printable_keys(d):
+        try:
+            d.pop('summary')
+            d.pop('global_step')
+        except KeyError as err:
+            tf.logging.error(err.args)
+
     def _test_loop(self):
         maes = []
         try:
@@ -211,6 +237,33 @@ class RegressionTrainer(Trainer):
                             np.std(maes)))
 
 class ClassificationTrainer(Trainer):
+
+    def _get_monitor_ops(self, extra_ops=[]):
+        fetches = [self.model.loss,
+                   self.model.accuracy,
+                   self.model.cm,
+                   self.model.softmax,
+                   self.write_op]
+        fetches.extend(extra_ops)
+        return fetches
+
+    def _run_graph(self, fetches):
+        loss, accuracy, cm, softmx, summary, global_step = self.sess.run(fetches)
+
+        return {'loss':loss,
+                'accuracy':accuracy,
+                'cm':cm,
+                'softmax':softmx,
+                'summary':summary,
+                'global_step':global_step}
+
+    def _keep_printable_keys(d):
+        try:
+            d.pop('summary')
+            d.pop('softmax')
+            d.pop('global_step')
+        except KeyError as err:
+            tf.logging.error(err.args)
 
     def _test_loop(self):
         accuracies = []
