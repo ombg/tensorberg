@@ -31,6 +31,7 @@ def process_config(json_file):
         os.makedirs(config.checkpoint_dir, exist_ok=True)
         os.makedirs(config.checkpoint_dir_restore, exist_ok=True)
         os.makedirs(config.bottleneck_dir, exist_ok=True)
+        return config
     except FileNotFoundError as err:
-        tf.logging.error(err.args)
-    return config
+        print(err.args)
+        raise
