@@ -112,11 +112,11 @@ class FullyConnectedNet(AbstractNet):
     @property
     def prediction(self):
         if self._prediction == None:
-            data_dim = int(self.data.shape[1])
+            data_dim = self.data.get_shape()[1].value
             layer_name = 'fc1'
             fc1l, fc1w, fc1b = layers.fc(self.data,
                                          num_in=data_dim,
-                                         units=4096,
+                                         units=100,
                                          name=layer_name,
                                          relu=True)
             self.parameters += [fc1w, fc1b]
@@ -124,8 +124,8 @@ class FullyConnectedNet(AbstractNet):
 
             layer_name = 'fc2'
             fc2l, fc2w, fc2b = layers.fc(fc1l,
-                                         num_in=4096,
-                                         units=4096,
+                                         num_in=fc1l.get_shape()[1].value,
+                                         units=100,
                                          name=layer_name,
                                          relu=True)
             self.parameters += [fc2w, fc2b]
@@ -133,7 +133,7 @@ class FullyConnectedNet(AbstractNet):
 
             layer_name = 'fc3'
             fc3l, fc3w, fc3b = layers.fc(fc2l,
-                                         num_in=4096,
+                                         num_in=fc2l.get_shape()[1].value,
                                          units=10,
                                          name=layer_name,
                                          relu=False)
