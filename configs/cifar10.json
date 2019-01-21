@@ -6,8 +6,8 @@
     "dataset_name": "cifar10",
     "work_dir": "/tmp/work_dir/",
     "exp_name": "cifar10_classifier",
-    "checkpoint_to_restore": "no_restore",
-    "num_epochs": 2,
+    "checkpoint_to_restore": "run_46505",
+    "num_epochs": 20,
     "learning_rate": 0.05,
     "batch_size": 64,
     "max_to_keep":5

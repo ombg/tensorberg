@@ -10,6 +10,7 @@ class AbstractNet(ABC):
         if data_loader != None:
             self.data, self.labels = data_loader.get_input()
             self.num_classes = self.labels.get_shape()[1].value
+            tf.summary.image('orig_image',self.data)
         else:
             self.data = tf.placeholder(tf.float32, [None, 32, 32, 3])
             self.labels = tf.placeholder(tf.int32, [None])
@@ -55,6 +56,8 @@ class AbstractNet(ABC):
                 data_loss = tf.reduce_mean(cross_entropy)
                 reg_loss = tf.losses.get_regularization_loss()
                 self._loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
+                tf.summary.scalar('data_loss', data_loss)
+                tf.summary.scalar('reg_loss', reg_loss)
                 tf.summary.scalar('total_loss', self._loss)
         return self._loss
 
