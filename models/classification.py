@@ -3,6 +3,47 @@ import tensorflow as tf
 
 from models import layers
 
+class ToyModel:
+    """A simple toy model. For test purposes it is defined in the constructor.
+    """
+
+    def __init__(self, data_loader):
+        self.data, self.label = data_loader.get_input()
+        self.data = tf.layers.flatten(self.data)
+        self.label = tf.cast(self.label, tf.int32)
+        data_size = int(self.data.get_shape()[1])
+        label_size = int(self.label.get_shape()[1])
+        weight = tf.Variable(tf.truncated_normal([data_size, label_size]))
+        bias = tf.Variable(tf.constant(0.1, shape=[label_size]))
+        incoming = tf.matmul(self.data, weight) + bias
+        self._prediction = tf.nn.softmax(incoming)
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(
+                            labels=self.label,
+                            logits=self._prediction)
+        self._loss = tf.reduce_mean(cross_entropy)
+        tf.summary.scalar('loss',self._loss)
+        global_step=tf.train.get_or_create_global_step()
+        self._optimize = tf.train.RMSPropOptimizer(0.03).minimize(self._loss, global_step=global_step)
+        mistakes = tf.not_equal(
+            tf.argmax(self.label, 1), tf.argmax(self._prediction, 1))
+        self._error = tf.reduce_mean(tf.cast(mistakes, tf.float32))
+
+    @property
+    def prediction(self):
+        return self._prediction
+
+    @property
+    def optimize(self):
+        return self._optimize
+
+    @property
+    def error(self):
+        return self._error
+
+    @property
+    def loss(self):
+        return self._loss
+
 class AbstractNet(ABC):
     def __init__(self, config, data_loader=None):
         self.config = config
