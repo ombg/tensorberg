@@ -40,6 +40,7 @@ def main():
                                         data_loader=data_loader)
     
         trainer.train()
+        #trainer.test(config.checkpoint_to_restore_path)
         trainer.test()
         tf.logging.info('==== Configuration ====')
         tf.logging.info(pprint.pprint(config))

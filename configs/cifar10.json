@@ -8,7 +8,7 @@
     "exp_name": "cifar10_classifier",
     "checkpoint_to_restore": "run_46505",
     "num_epochs": 20,
-    "learning_rate": 0.05,
-    "batch_size": 64,
+    "learning_rate": 0.0005,
+    "batch_size": 32,
     "max_to_keep":5
 }

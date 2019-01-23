@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def fc(x, num_in, units, name, relu=True, force_alloc=False):
+def fc(x, num_in, units, name, relu=True, force_alloc=False, log_weights=True):
     """Create a fully connected layer.
     Args:
         x: A `Tensor`. It holds the input samples.
@@ -30,6 +30,9 @@ def fc(x, num_in, units, name, relu=True, force_alloc=False):
         # Matrix multiply weights and inputs and add bias
         act = tf.nn.xw_plus_b(x, weights, biases, name=scope.name)
 
+        if log_weights == True:
+            tf.summary.histogram('weights', weights)
+            tf.summary.histogram('biases', biases)
     if relu:
         # Apply ReLu non-linearity
         relu = tf.nn.relu(act)

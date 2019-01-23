@@ -54,7 +54,7 @@ class AbstractNet(ABC):
                                     labels=self.labels,
                                     logits=self.prediction)
                 data_loss = tf.reduce_mean(cross_entropy)
-                reg_loss = tf.losses.get_regularization_loss()
+                reg_loss = 1e-2 * tf.losses.get_regularization_loss()
                 self._loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
                 tf.summary.scalar('data_loss', data_loss)
                 tf.summary.scalar('reg_loss', reg_loss)
@@ -123,7 +123,6 @@ class FullyConnectedNet(AbstractNet):
                                          name=layer_name,
                                          relu=True)
             self.parameters += [fc1w, fc1b]
-            tf.summary.histogram(layer_name, fc1l)
 
             layer_name = 'fc2'
             fc2l, fc2w, fc2b = layers.fc(fc1l,
@@ -132,7 +131,6 @@ class FullyConnectedNet(AbstractNet):
                                          name=layer_name,
                                          relu=True)
             self.parameters += [fc2w, fc2b]
-            tf.summary.histogram(layer_name, fc2l)
 
             layer_name = 'fc3'
             fc3l, fc3w, fc3b = layers.fc(fc2l,
@@ -141,7 +139,6 @@ class FullyConnectedNet(AbstractNet):
                                          name=layer_name,
                                          relu=False)
             self.parameters += [fc3w, fc3b]
-            tf.summary.histogram(layer_name, fc3l)
 
             self._prediction = fc3l
 
