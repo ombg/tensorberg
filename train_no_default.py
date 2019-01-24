@@ -6,7 +6,7 @@ import tensorflow as tf
 #from models.classification import ToyModel
 from models.classification import FullyConnectedNet
 
-from utils.datahandler import TFRecordDatasetLoader
+from utils import datahandler
 from utils.config import process_config
 from utils.general_utils import get_args
 from utils.data_utils import parse_txt
@@ -21,29 +21,33 @@ def main():
     sess = tf.Session()
 
     # Loads data into a tf.dataset
-    data_loader = TFRecordDatasetLoader(config)
+    dset_train = datahandler.dset_from_tfrecord('/tmp/cifar_tfrecord/train.tfrecords',
+                                   do_shuffle=False,
+                                   use_distortion=False)
 
-    data_loader.load_datasets(do_shuffle=True,
-                              train_repetitions=-1)
+    iterator = tf.data.Iterator.from_structure(dset_train.output_types,
+                                               dset_train.output_shapes)
+
+    training_init_op = iterator.make_initializer(dset_train)
+    next_element = iterator.get_next()
     # create instance of the model 
     #model = ToyModel(data_loader=data_loader)
-    model = FullyConnectedNet(config, data_loader=data_loader)
+    model = FullyConnectedNet(config, data_loader=next_element)
     model.build_graph()
-    next_element = data_loader.get_input()
     # TODO There is a fancy way to get rid of this using decorators:
     # https://danijar.com/structuring-your-tensorflow-models/
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
+        sess.run(training_init_op)
+        global_step=tf.train.get_or_create_global_step()
         for _ in range(20):
-            data_loader.initialize_val(sess)
-            accuracy = sess.run(model.accuracy)
-            print('Test accuracy {:6.2f}%'.format(100 * accuracy))
-            data_loader.initialize_train(sess)
+            accuracy, global_step_vl = sess.run([model.accuracy, global_step])
+            print('{}#: Test accuracy {:6.2f}%'.format(global_step_vl, 100 * accuracy ))
             for i in range(60):
                 if i == 0:
-                    loss, _,_ = sess.run([model.loss, model.optimize, next_element])
-                    print('Training set loss: {:6.2f}'.format(loss))
+                    global_step_vl, loss, _,_ = sess.run([global_step, model.loss, model.optimize, next_element])
+                    print('{}#: Training set loss: {:6.2f}'.format(global_step_vl, loss))
                 else:
                     sess.run(next_element)
                     sess.run(model.optimize)
