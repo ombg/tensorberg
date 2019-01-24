@@ -24,11 +24,15 @@ def main():
     dset_train = datahandler.dset_from_tfrecord('/tmp/cifar_tfrecord/train.tfrecords',
                                    do_shuffle=False,
                                    use_distortion=False)
+    dset_val = datahandler.dset_from_tfrecord('/tmp/cifar_tfrecord/validation.tfrecords',
+                                   do_shuffle=False,
+                                   use_distortion=False)
 
     iterator = tf.data.Iterator.from_structure(dset_train.output_types,
                                                dset_train.output_shapes)
 
     training_init_op = iterator.make_initializer(dset_train)
+    validation_init_op = iterator.make_initializer(dset_val)
     next_element = iterator.get_next()
     # create instance of the model 
     #model = ToyModel(data_loader=data_loader)
@@ -39,11 +43,12 @@ def main():
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        sess.run(training_init_op)
+        sess.run(validation_init_op)
         global_step=tf.train.get_or_create_global_step()
         for _ in range(20):
             accuracy, global_step_vl = sess.run([model.accuracy, global_step])
             print('{}#: Test accuracy {:6.2f}%'.format(global_step_vl, 100 * accuracy ))
+            sess.run(training_init_op)
             for i in range(60):
                 if i == 0:
                     global_step_vl, loss, _ = sess.run([global_step, model.loss, model.optimize])
