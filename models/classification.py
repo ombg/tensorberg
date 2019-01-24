@@ -7,8 +7,8 @@ class ToyModel:
     """A simple toy model. For test purposes it is defined in the constructor.
     """
 
-    def __init__(self, data, label):
-        self.data, self.label = data, label
+    def __init__(self, data_loader):
+        self.data, self.label = data_loader.get_input()
         self.data = tf.layers.flatten(self.data)
         self.label = tf.cast(self.label, tf.int32)
         data_size = int(self.data.get_shape()[1])
@@ -49,9 +49,9 @@ class AbstractNet(ABC):
         self.config = config
 
         if data_loader != None:
-            self.data, self.labels = data_loader.get_input()
+            self.data, self.labels = data_loader
         else:
-            self.data = tf.placeholder(tf.float32, [None, 28, 28, 1])
+            self.data = tf.placeholder(tf.float32, [None, 32, 32, 3])
             self.labels = tf.placeholder(tf.int32, [None, 10])
 
         self.num_classes = self.labels.get_shape()[1].value

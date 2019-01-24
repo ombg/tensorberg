@@ -524,7 +524,7 @@ def dset_from_tfrecord(tfrecord_file,
     dset = dset.batch(batch_size)
         
     # TODO Only take up to `max_samples` samples from the data.
-    dset = dset.take(max_samples)
+    #dset = dset.take(max_samples)
 
     return dset
 
