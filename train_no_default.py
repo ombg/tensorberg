@@ -46,10 +46,9 @@ def main():
             print('{}#: Test accuracy {:6.2f}%'.format(global_step_vl, 100 * accuracy ))
             for i in range(60):
                 if i == 0:
-                    global_step_vl, loss, _,_ = sess.run([global_step, model.loss, model.optimize, next_element])
+                    global_step_vl, loss, _ = sess.run([global_step, model.loss, model.optimize])
                     print('{}#: Training set loss: {:6.2f}'.format(global_step_vl, loss))
                 else:
-                    sess.run(next_element)
                     sess.run(model.optimize)
 
     tf.logging.info('==== Configuration ====')
