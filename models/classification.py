@@ -5,25 +5,25 @@ from models import layers
 
 class ToyModel:
     """A simple toy model. For test purposes it is defined in the constructor.
+    Use decorators for more complex models.
     """
 
     def __init__(self, data_loader):
-        self.data, self.label = data_loader.get_input()
+        self.data, self.label = data_loader
         self.data = tf.layers.flatten(self.data)
-        self.label = tf.cast(self.label, tf.int32)
         data_size = int(self.data.get_shape()[1])
         label_size = int(self.label.get_shape()[1])
-        weight = tf.Variable(tf.truncated_normal([data_size, label_size]))
-        bias = tf.Variable(tf.constant(0.1, shape=[label_size]))
-        incoming = tf.matmul(self.data, weight) + bias
-        self._prediction = tf.nn.softmax(incoming)
+        hidden1, _, _ = layers.fc(self.data, data_size, 100, name='hidden1',log_weights=False)
+        logits, _, _ = layers.fc(hidden1, 100, label_size, name='logits', relu=False, log_weights=False)
         cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(
                             labels=self.label,
-                            logits=self._prediction)
-        self._loss = tf.reduce_mean(cross_entropy)
-        tf.summary.scalar('loss',self._loss)
+                            logits=logits)
+        data_loss = tf.reduce_mean(cross_entropy)
+        reg_loss = 1e-3 * tf.losses.get_regularization_loss()
+        self._loss = tf.add(data_loss, reg_loss, name='data_and_reg_loss')
         global_step=tf.train.get_or_create_global_step()
         self._optimize = tf.train.RMSPropOptimizer(0.03).minimize(self._loss, global_step=global_step)
+        self._prediction = tf.nn.softmax(logits)
         mistakes = tf.not_equal(
             tf.argmax(self.label, 1), tf.argmax(self._prediction, 1))
         self._error = tf.reduce_mean(tf.cast(mistakes, tf.float32))

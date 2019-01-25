@@ -3,8 +3,7 @@ import pprint
 
 import tensorflow as tf
 
-#from models.classification import ToyModel
-from models.classification import FullyConnectedNet
+from models.classification import ToyModel
 
 from utils import datahandler
 from utils.config import process_config
@@ -34,19 +33,15 @@ def main():
     iter_val = dset_val.make_one_shot_iterator()
     next_val_sample = iter_val.get_next()
     # create instance of the model 
-    #model = ToyModel(data_loader=data_loader)
-    model = FullyConnectedNet(config, data_loader=next_train_sample)
-    model.build_graph()
-    # TODO There is a fancy way to get rid of this using decorators:
-    # https://danijar.com/structuring-your-tensorflow-models/
+    model = ToyModel(data_loader=next_train_sample)
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         global_step=tf.train.get_or_create_global_step()
         for _ in range(20):
             sess.run(next_val_sample)
-            accuracy, global_step_vl = sess.run([model.accuracy, global_step])
-            print('{}#: Test accuracy {:6.2f}%'.format(global_step_vl, 100 * accuracy ))
+            error, global_step_vl = sess.run([model.error, global_step])
+            print('{}#: Test error {:6.2f}%'.format(global_step_vl, 100 * error ))
             sess.run(next_train_sample)
             for i in range(60):
                 if i == 0:
@@ -54,9 +49,6 @@ def main():
                     print('{}#: Training set loss: {:6.2f}'.format(global_step_vl, loss))
                 else:
                     sess.run(model.optimize)
-
-    tf.logging.info('==== Configuration ====')
-    tf.logging.info(pprint.pprint(config))
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)

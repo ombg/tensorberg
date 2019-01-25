@@ -20,7 +20,7 @@ def fc(x, num_in, units, name, relu=True, force_alloc=False, log_weights=True):
         weights = tf.get_variable(name='weights',
                                shape=[num_in, units],
                                initializer=tf.glorot_uniform_initializer(),
-                               regularizer=None,
+                               regularizer=tf.nn.l2_loss,
                                trainable=True)
         biases = tf.get_variable(name='biases',
                                shape=[units],
