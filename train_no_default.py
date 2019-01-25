@@ -9,34 +9,30 @@ from ompy import plotml, ml
 
 def main():
 
+    d =  np.load('/tmp/spiral_data_dict.npy')
+    features = d.item().get('features')
+    labels = d.item().get('labels')
+
+    num_samples, num_classes = labels.shape
     # create tensorflow session
     sess = tf.Session()
-    num_classes = 3
-    num_features = 2
-    samples_per_class = 200
-
-    # Loads data into a tf.dataset
-    features, labels = plotml.spiral(samples_per_class, num_features, num_classes, plot_me=True)
-    features = features.astype(np.float32)
-    labels = ml.makeonehot(labels, num_classes=num_classes)
-    assert features.shape[0] == labels.shape[0]
-
     dset_train = tf.data.Dataset.from_tensor_slices((features, labels))
-    dset_train = dset_train.shuffle(num_classes * samples_per_class)
+    dset_train = dset_train.shuffle(num_samples)
     dset_train = dset_train.batch(20)
     iter_train = dset_train.make_one_shot_iterator()
-    features_tensor, labels_tensor = iter_train.get_next()
+    next_element = iter_train.get_next()
 
     # create instance of the model 
-    model = ToyModel(features_tensor,
-                     labels_tensor,
-                     num_features=num_features,
+    model = ToyModel(next_element[0],
+                     next_element[1],
+                     num_features=features.shape[1],
                      num_classes=num_classes)
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         global_step=tf.train.get_or_create_global_step()
         for _ in range(15):
+            sess.run(next_element)
             fetches = [ model.error,
                         model.loss,
                         model.optimize,
