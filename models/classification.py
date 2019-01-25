@@ -8,15 +8,12 @@ class ToyModel:
     Use decorators for more complex models.
     """
 
-    def __init__(self, data_loader):
-        self.data, self.label = data_loader
-        self.data = tf.layers.flatten(self.data)
-        data_size = int(self.data.get_shape()[1])
-        label_size = int(self.label.get_shape()[1])
-        hidden1, _, _ = layers.fc(self.data, data_size, 100, name='hidden1',log_weights=False)
-        logits, _, _ = layers.fc(hidden1, 100, label_size, name='logits', relu=False, log_weights=False)
+    def __init__(self, data, label, num_features, num_classes):
+
+        hidden1, _, _ = layers.fc(data, num_features, 100, name='hidden1',log_weights=False)
+        logits, _, _ = layers.fc(hidden1, 100, num_classes, name='logits', relu=False, log_weights=False)
         cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(
-                            labels=self.label,
+                            labels=label,
                             logits=logits)
         data_loss = tf.reduce_mean(cross_entropy)
         reg_loss = 1e-3 * tf.losses.get_regularization_loss()
@@ -25,7 +22,7 @@ class ToyModel:
         self._optimize = tf.train.RMSPropOptimizer(0.03).minimize(self._loss, global_step=global_step)
         self._prediction = tf.nn.softmax(logits)
         mistakes = tf.not_equal(
-            tf.argmax(self.label, 1), tf.argmax(self._prediction, 1))
+            tf.argmax(label, 1), tf.argmax(self._prediction, 1))
         self._error = tf.reduce_mean(tf.cast(mistakes, tf.float32))
 
     @property
