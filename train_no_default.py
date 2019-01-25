@@ -10,22 +10,20 @@ from ompy import plotml, ml
 
 def main():
 
-    d =  np.load('/tmp/clustered_data_dict.npy')
+    d =  np.load('/tmp/spiral_data_dict.npy')
     features = d.item().get('features')
     labels = d.item().get('labels')
     
     num_samples, num_classes = labels.shape
     num_features=features.shape[1]
-    # create tensorflow session
-    sess = tf.Session()
     #dset_train = tf.data.Dataset.from_tensor_slices((features, labels))
     #dset_train = dset_train.shuffle(num_samples)
     #dset_train = dset_train.batch(20)
     #iter_train = dset_train.make_one_shot_iterator()
     #next_element = iter_train.get_next()
 
-    data = tf.placeholder(tf.float32, shape=(None, num_features), name='data')
-    label = tf.placeholder(tf.float32, shape=(None, num_classes), name='label')
+    data = tf.placeholder(tf.float32, shape=[None, num_features], name='data')
+    label = tf.placeholder(tf.float32, shape=[None, num_classes], name='label')
     # create instance of the model 
     model = ToyModel(data,
                      label,
@@ -38,7 +36,7 @@ def main():
         global_step=tf.train.get_or_create_global_step()
         bs = 5
         i=0
-        while i < 100:
+        while i < 20:
             #sess.run(next_element)
             fetches = [ model.error,
                         model.loss,
