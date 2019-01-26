@@ -16,14 +16,16 @@ def main():
     labels_scalar = d.item().get('labels_scalar')
     num_samples, num_classes = labels.shape
     num_features=features.shape[1]
-    #dset_train = tf.data.Dataset.from_tensor_slices((features, labels))
+    dset_train = tf.data.Dataset.from_tensor_slices((features, labels))
     #dset_train = dset_train.shuffle(num_samples)
-    #dset_train = dset_train.batch(20)
-    #iter_train = dset_train.make_one_shot_iterator()
-    #next_element = iter_train.get_next()
-
-    data = tf.placeholder(tf.float32, shape=[None, num_features], name='data')
-    label = tf.placeholder(tf.float32, shape=[None, num_classes], name='label')
+    dset_train = dset_train.repeat(-1)
+    dset_train = dset_train.batch(features.shape[0]) #Use whole X, as in ml.train_twolayernet()
+    iter_train = dset_train.make_one_shot_iterator()
+    next_element = iter_train.get_next()
+    data = next_element[0]
+    label = next_element[1]
+    #data = tf.placeholder(tf.float32, shape=[None, num_features], name='data')
+    #label = tf.placeholder(tf.float32, shape=[None, num_classes], name='label')
     # create instance of the model 
     hidden1, fc1w, fc1b = layers.fc(data, num_features, 100, name='hidden1',log_weights=False)
     logits, fc2w, fc2b = layers.fc(hidden1, 100, num_classes, name='logits', relu=False, log_weights=False)
@@ -50,14 +52,16 @@ def main():
                         loss,
                         optimize,
                         global_step]
-            error_vl, loss_vl, _, global_step_vl = sess.run(fetches, feed_dict={ data: features, label: labels})
+            error_vl, loss_vl, _, global_step_vl = sess.run(fetches)
+            #error_vl, loss_vl, _, global_step_vl = sess.run(fetches, feed_dict={ data: features, label: labels})
             if global_step_vl % 1000 == 0:
                 print('{}#: Training error {:6.2f}% - Training set loss: {:6.2f}'.format(
                       global_step_vl, 100 * error_vl, loss_vl ))
 
         # Plot final classifier boundaries
         fetches = [fc1w, fc1b,fc2w,fc2b]
-        W1, b1, W2, b2 = sess.run(fetches, feed_dict={ data: features, label: labels})
+        #W1, b1, W2, b2 = sess.run(fetches, feed_dict={ data: features, label: labels})
+        W1, b1, W2, b2 = sess.run(fetches)
         plotml.plot2Dclassifier(W1, b1, W2, b2, features, labels_scalar)
         plotml.plot2layerNetClassifier(features, W1, W2, b1, b2, labels_scalar)
 
