@@ -63,7 +63,6 @@ def main():
     error = tf.reduce_mean(tf.cast(mistakes, tf.float32))
 
     with tf.Session() as sess:
-        #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         sess.run(tf.global_variables_initializer())
         train_handle = sess.run(train_iter.string_handle())
         test_handle = sess.run(test_iter.string_handle())
@@ -85,16 +84,12 @@ def main():
         fetches = [fc1w, fc1b,fc2w,fc2b]
         W1, b1, W2, b2 = sess.run(fetches, feed_dict={handle: train_handle})
         plotml.plot2Dclassifier(W1, b1, W2, b2, test_x, test_y_scalar)
-        #plotml.plot2layerNetClassifier(features, W1, W2, b1, b2, labels_scalar)
 
-    # Alternatively, run without TF and plot for comparison with TF version
-    #w = ml.train_twolayernet(features, labels_scalar)
-    #plotml.plot2Dclassifier(w['W1'], w['b1'], w['W2'], w['b2'],
-    #                        features, labels_scalar,
-    #                        save_to='/tmp/toy_spiral_w_boundaries.png')
-    #plotml.plot2layerNetClassifier(features, w['W1'], w['W2'], w['b1'], w['b2'],
-    #                               labels_scalar,
-    #                               save_to='/tmp/toy_spiral_w_boundaries_B.png')
+    #Alternatively, run without TF and plot for comparison with TF version
+    w = ml.train_twolayernet(train_x, train_y_scalar)
+    plotml.plot2Dclassifier(w['W1'], w['b1'], w['W2'], w['b2'],
+                            test_x, test_y_scalar,
+                            save_to='/tmp/toy_spiral_w_boundaries.png')
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
