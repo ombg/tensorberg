@@ -46,7 +46,7 @@ class AbstractNet(ABC):
         self.config = config
 
         if data_loader != None:
-            self.data, self.labels = data_loader
+            self.data, self.labels = data_loader.get_input()
         else:
             self.data = tf.placeholder(tf.float32, [None, 32, 32, 3])
             self.labels = tf.placeholder(tf.int32, [None, 10])

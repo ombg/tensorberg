@@ -23,6 +23,7 @@ class AbstractDatasetLoader(ABC):
         self.training_init_op = None
         self.val_init_op = None
         self.test_init_op = None
+        self.handle = tf.placeholder( tf.string, shape=[])
 
     @abstractmethod
     def load_datasets(self, do_shuffle=True, train_repetitions=-1):
@@ -30,36 +31,39 @@ class AbstractDatasetLoader(ABC):
 
     def _get_iterator(self, dset):
         if not isinstance(self.iterator, tf.data.Iterator):
-            self.iterator = tf.data.Iterator.from_structure(dset.output_types,
-                                                            dset.output_shapes)
+            self.iterator = tf.data.Iterator.from_string_handle(self.handle,
+                                                                dset.output_types,
+                                                                dset.output_shapes)
 
     def _create_iterators(self):
 
         if self.config.is_training.lower() == 'true':
             self._get_iterator(self.train_dataset)
-            self.training_init_op = self.iterator.make_initializer(self.train_dataset)
+            self.training_init_op = self.train_dataset.make_one_shot_iterator()
 
         if int(self.config.validation_percentage) > 0:
             self._get_iterator(self.val_dataset)
-            self.val_init_op = self.iterator.make_initializer(self.val_dataset)
+            self.val_init_op = self.val_dataset.make_one_shot_iterator()
 
         if int(self.config.testing_percentage) > 0:
             self._get_iterator(self.test_dataset)
-            self.test_init_op = self.iterator.make_initializer(self.test_dataset)
+            self.test_init_op = self.test_dataset.make_one_shot_iterator()
 
 
     def initialize_train(self, sess):
         if self.config.is_training.lower() != 'true':
             raise RuntimeError('is_training flag is not set to true')
-        sess.run(self.training_init_op)
+        return sess.run(self.training_init_op.string_handle())
+
     def initialize_val(self, sess):
         if int(self.config.validation_percentage) <= 0:
             raise RuntimeError('Validation set is set to 0%')
-        sess.run(self.val_init_op)
+        return sess.run(self.val_init_op.string_handle())
+
     def initialize_test(self, sess):
         if int(self.config.testing_percentage) <= 0:
             raise RuntimeError('Test set is set to 0%')
-        sess.run(self.test_init_op)
+        return sess.run(self.test_init_op.string_handle())
 
     def get_input(self):
         return self.iterator.get_next()

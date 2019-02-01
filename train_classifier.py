@@ -3,7 +3,7 @@ import pprint
 
 import tensorflow as tf
 
-from models.classification import ToyModel
+from models.classification import FullyConnectedNet
 from trainers.default_trainer import ClassificationTrainer
 
 from utils.datahandler import TFRecordDatasetLoader
@@ -25,8 +25,9 @@ def main():
 
     data_loader.load_datasets(do_shuffle=True,
                               train_repetitions=-1)
+
     # create instance of the model 
-    model = ToyModel(data_loader=data_loader)
+    model = FullyConnectedNet(config, data_loader=data_loader)
 
     # TODO There is a fancy way to get rid of this using decorators:
     # https://danijar.com/structuring-your-tensorflow-models/

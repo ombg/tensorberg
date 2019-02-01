@@ -46,7 +46,7 @@ class Trainer(ABC):
         pass
 
     @abstractmethod
-    def _run_graph(self, fetches):
+    def _run_graph(self, fetches, handle):
         pass
 
     @abstractmethod
@@ -77,26 +77,25 @@ class Trainer(ABC):
                 self.config.summary_dir + 'run_' + str(train_id) + '/val', self.sess.graph)
         
             tf.logging.info('train(): Training for {} epochs...'.format(self.config.num_epochs))
+            train_handle = self.data_loader.initialize_train(self.sess)
+            val_handle = self.data_loader.initialize_val(self.sess)
             for i in range(self.config.num_epochs):
                 tf.logging.info('train(): ===== EPOCH {} ====='.format(i))
-                # Initialize iterator with training data
-                self.data_loader.initialize_train(self.sess)
-                tf.logging.info('Initial loss: {}'.format(self.sess.run(self.model.loss)))
                 #Do not monitor, just train for one epoch
                 for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
-                    self.sess.run([self.model.optimize])
+                    self.sess.run([self.model.optimize],
+                                  feed_dict={self.data_loader.handle : train_handle })
         
                 # Monitor the training after every epoch
                 fetches = self._get_monitor_ops(extra_ops=[global_step])
-                train_output = self._run_graph(fetches)
+                train_output = self._run_graph(fetches, train_handle)
                 train_writer.add_summary(train_output['summary'],
                                          global_step=train_output['global_step'])
                 train_writer.flush()
     
                 #Check how it goes with the validation set
-                self.data_loader.initialize_val(self.sess)
                 fetches = self._get_monitor_ops(extra_ops=[global_step])
-                val_output = self._run_graph(fetches)
+                val_output = self._run_graph(fetches, val_handle)
     
                 val_writer.add_summary(val_output['summary'],
                                          global_step=val_output['global_step'])
@@ -139,8 +138,7 @@ class Trainer(ABC):
             # Check if test data is loaded
             if self.data_loader == None or int(self.config.testing_percentage) <= 0:
                 raise RuntimeError('No test data or testset set to 0%! Check JSON config')
-            # Load test dataset
-            self.data_loader.initialize_test(self.sess)
+
             self._test_loop()
         except RuntimeError as err:
             tf.logging.error(err.args)
@@ -203,8 +201,9 @@ class RegressionTrainer(Trainer):
         fetches.extend(extra_ops)
         return fetches
 
-    def _run_graph(self, fetches):
-        loss, mae, summary, global_step = self.sess.run(fetches)
+    def _run_graph(self, fetches, handle):
+        loss, mae, summary, global_step = self.sess.run( fetches,
+                feed_dict={self.data_loader.handle : handle} )
 
         return {'loss':loss,
                 'mae':mae,
@@ -212,11 +211,15 @@ class RegressionTrainer(Trainer):
                 'global_step':global_step}
 
     def _test_loop(self):
+        # Load test dataset
+        test_handle = self.data_loader.initialize_test(self.sess)
         maes = []
         try:
             bn = 0
             while True:
-                mae, prediction = self.sess.run([self.model.mae, self.model.prediction])
+                mae, prediction = self.sess.run([self.model.mae, self.model.prediction],
+                                                feed_dict={self.data_loader.handle : test_handle})
+
                 tf.logging.info('Per batch Mean Absolute Error: {}'.format(mae))
                 maes.append(mae)
                 save_batch(
@@ -249,8 +252,9 @@ class ClassificationTrainer(Trainer):
         fetches.extend(extra_ops)
         return fetches
 
-    def _run_graph(self, fetches):
-        loss, accuracy, cm, softmx, summary, global_step = self.sess.run(fetches)
+    def _run_graph(self, fetches, handle):
+        loss, accuracy, cm, softmx, summary, global_step = self.sess.run(fetches,
+                feed_dict={self.data_loader.handle : handle} )
 
         return {'loss':loss,
                 'accuracy':accuracy,
