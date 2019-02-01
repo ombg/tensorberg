@@ -267,11 +267,14 @@ class ClassificationTrainer(Trainer):
         accuracies = []
         num_classes = int(self.data_loader.test_dataset.output_shapes[1][1])
         confusion_matrix = np.zeros((num_classes, num_classes),dtype=int)
+        # Load test dataset
+        test_handle = self.data_loader.initialize_test(self.sess)
         try:
             while True:
                 fetches = [self.model.cm, self.model.accuracy]
                 # Gets matrix [batch_size x num_classes] predictions
-                cm, acc = self.sess.run(fetches)
+                cm, acc = self.sess.run(fetches,
+                                        feed_dict={self.data_loader.handle : test_handle})
                 tf.logging.info('Per batch average test_acc: {:5.2f}%'.format(acc * 100.0))
                 accuracies.append(acc)
                 confusion_matrix += cm
