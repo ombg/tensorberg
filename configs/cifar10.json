@@ -7,8 +7,8 @@
     "work_dir": "/tmp/work_dir/",
     "exp_name": "cifar10_classifier",
     "checkpoint_to_restore": "run_46505",
-    "num_epochs": 5,
-    "learning_rate": 0.0005,
-    "batch_size": 32,
+    "num_epochs": 100,
+    "learning_rate": 0.001,
+    "batch_size": 128,
     "max_to_keep":5
 }

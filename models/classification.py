@@ -158,7 +158,7 @@ class FullyConnectedNet(AbstractNet):
             layer_name = 'fc1'
             fc1l, fc1w, fc1b = layers.fc(self.data,
                                          num_in=data_dim,
-                                         units=100,
+                                         units=80,
                                          name=layer_name,
                                          relu=True)
             self.parameters += [fc1w, fc1b]
@@ -166,7 +166,7 @@ class FullyConnectedNet(AbstractNet):
             layer_name = 'fc2'
             fc2l, fc2w, fc2b = layers.fc(fc1l,
                                          num_in=fc1l.get_shape()[1].value,
-                                         units=100,
+                                         units=80,
                                          name=layer_name,
                                          relu=True)
             self.parameters += [fc2w, fc2b]
@@ -174,12 +174,52 @@ class FullyConnectedNet(AbstractNet):
             layer_name = 'fc3'
             fc3l, fc3w, fc3b = layers.fc(fc2l,
                                          num_in=fc2l.get_shape()[1].value,
+                                         units=80,
+                                         name=layer_name,
+                                         relu=True)
+            self.parameters += [fc3w, fc3b]
+
+            layer_name = 'fc4'
+            fc4l, fc4w, fc4b = layers.fc(fc3l,
+                                         num_in=fc3l.get_shape()[1].value,
+                                         units=80,
+                                         name=layer_name,
+                                         relu=True)
+            self.parameters += [fc4w, fc4b]
+
+            layer_name = 'fc5'
+            fc5l, fc5w, fc5b = layers.fc(fc4l,
+                                         num_in=fc4l.get_shape()[1].value,
+                                         units=80,
+                                         name=layer_name,
+                                         relu=True)
+            self.parameters += [fc5w, fc5b]
+
+            layer_name = 'fc6'
+            fc6l, fc6w, fc6b = layers.fc(fc5l,
+                                         num_in=fc5l.get_shape()[1].value,
+                                         units=80,
+                                         name=layer_name,
+                                         relu=True)
+            self.parameters += [fc6w, fc6b]
+
+            layer_name = 'fc7'
+            fc7l, fc7w, fc7b = layers.fc(fc6l,
+                                         num_in=fc6l.get_shape()[1].value,
+                                         units=80,
+                                         name=layer_name,
+                                         relu=True)
+            self.parameters += [fc7w, fc7b]
+
+            layer_name = 'fc8'
+            fc8l, fc8w, fc8b = layers.fc(fc7l,
+                                         num_in=fc7l.get_shape()[1].value,
                                          units=10,
                                          name=layer_name,
                                          relu=False)
-            self.parameters += [fc3w, fc3b]
+            self.parameters += [fc7w, fc7b]
 
-            self._prediction = fc3l
+            self._prediction = fc8l
 
         return self._prediction
 
