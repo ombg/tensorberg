@@ -98,9 +98,9 @@ class Trainer(ABC):
                 Trainer._keep_printable_keys(train_output)
                 Trainer._keep_printable_keys(val_output)
     
-                tf.logging.info('{}#: Training set loss: {:6.2f} Val acc {:6.2f}%'.format(
-                        train_output['global_step'], train_output['loss'], val_output['accuracy']*100.))
-                tf.logging.info('softmax: sum:{} vector: {}'.format(np.sum(train_output['softmax'][0]), train_output['softmax'][0]))
+                tf.logging.info('{}#: Training set loss: {:6.2f} Train acc {:6.2f}% Val acc: {:6.2f}%'.format(
+                        train_output['global_step'], train_output['loss'],
+                        train_output['accuracy']*100., val_output['accuracy']*100.))
                 save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
 
                 tf.logging.info('train(): ===== EPOCH {} ====='.format(i))
