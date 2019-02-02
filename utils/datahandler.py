@@ -72,12 +72,14 @@ class TFRecordDatasetLoader(AbstractDatasetLoader):
 
     def __init__(self, config):
         super().__init__(config)
-        self.num_batches = cifar.NUM_SAMPLES_TRAINING // self.config.batch_size
+        #self.num_batches = cifar.NUM_SAMPLES_TRAINING // self.config.batch_size
+        self.num_batches = 1
 
     def load_datasets(self, do_shuffle=True, train_repetitions=-1):
         try:
             if self.config.is_training.lower() == 'true':
                 self.train_dataset = dset_from_tfrecord(cifar.get_data_path(self.config,'training'),
+                                                        max_samples=32,
                                                         batch_size=self.config.batch_size,
                                                         do_shuffle=do_shuffle,
                                                         use_distortion=True,
@@ -522,7 +524,7 @@ def dset_from_tfrecord(tfrecord_file,
         dset = dset.shuffle(buffer_size=min_queue_examples + 3 * batch_size)
     
     # TODO Only take up to `max_samples` samples from the data.
-    dset = dset.take(max_samples)
+    #dset = dset.take(max_samples)
 
     #TODO
     dset = dset.map(data_utils.parse_tf_example, num_parallel_calls=batch_size)

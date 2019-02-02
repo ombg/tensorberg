@@ -19,8 +19,8 @@ def fc(x, num_in, units, name, relu=True, force_alloc=False, log_weights=True):
         # Create tf variables for the weights and biases
         weights = tf.get_variable(name='weights',
                                shape=[num_in, units],
-                               initializer=tf.glorot_uniform_initializer(),
-                               regularizer=tf.nn.l2_loss,
+                               initializer=tf.random_normal_initializer(stddev=1e-3),
+                               regularizer=None,
                                trainable=True)
         biases = tf.get_variable(name='biases',
                                shape=[units],

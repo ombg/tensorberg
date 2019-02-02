@@ -101,6 +101,9 @@ class Trainer(ABC):
                 tf.logging.info('{}#: Training set loss: {:6.2f} Train acc {:6.2f}% Val acc: {:6.2f}%'.format(
                         train_output['global_step'], train_output['loss'],
                         train_output['accuracy']*100., val_output['accuracy']*100.))
+                np.set_printoptions(precision=3)
+                tf.logging.info('softmax: sum:{:4.3f} vector: {}'.format(
+                        np.sum(train_output['softmax'][0]), train_output['softmax'][0]))
                 save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
 
                 tf.logging.info('train(): ===== EPOCH {} ====='.format(i))

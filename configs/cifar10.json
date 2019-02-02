@@ -2,13 +2,13 @@
     "data_path":"/tmp/cifar_tfrecord/",
     "is_training": "True",
     "validation_percentage": "10",
-    "testing_percentage": "10",
+    "testing_percentage": "0",
     "dataset_name": "cifar10",
     "work_dir": "/tmp/work_dir/",
     "exp_name": "cifar10_classifier",
     "checkpoint_to_restore": "run_46505",
-    "num_epochs": 100,
+    "num_epochs": 20,
     "learning_rate": 0.001,
-    "batch_size": 128,
+    "batch_size": 32,
     "max_to_keep":5
 }
