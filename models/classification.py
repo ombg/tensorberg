@@ -89,7 +89,7 @@ class AbstractNet(ABC):
             Compute data loss and regularization loss
             """
             with tf.name_scope('loss'):
-                cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(
+                cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
                                     labels=self.labels,
                                     logits=self.prediction)
                 data_loss = tf.reduce_mean(cross_entropy)
@@ -133,7 +133,7 @@ class AbstractNet(ABC):
         if self._softmax == None:
             self._softmax = tf.nn.softmax(self.prediction)
             tf.summary.histogram('softmax', self._softmax)
-        return self._cm
+        return self._softmax
 
     def load_weights_from_numpy(self, weights_file, sess, weights_to_load=None):
         weights = np.load(weights_file)
@@ -217,7 +217,7 @@ class FullyConnectedNet(AbstractNet):
                                          units=10,
                                          name=layer_name,
                                          relu=False)
-            self.parameters += [fc7w, fc7b]
+            self.parameters += [fc8w, fc8b]
 
             self._prediction = fc8l
 
