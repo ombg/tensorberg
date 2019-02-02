@@ -80,13 +80,7 @@ class Trainer(ABC):
             train_handle = self.data_loader.initialize_train(self.sess)
             val_handle = self.data_loader.initialize_val(self.sess)
             for i in range(self.config.num_epochs):
-                tf.logging.info('train(): ===== EPOCH {} ====='.format(i))
-                #Do not monitor, just train for one epoch
-                for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
-                    self.sess.run([self.model.optimize],
-                                  feed_dict={self.data_loader.handle : train_handle })
-        
-                # Monitor the training after every epoch
+                # Monitor the training before every epoch
                 fetches = self._get_monitor_ops(extra_ops=[global_step])
                 train_output = self._run_graph(fetches, train_handle)
                 train_writer.add_summary(train_output['summary'],
@@ -98,14 +92,23 @@ class Trainer(ABC):
                 val_output = self._run_graph(fetches, val_handle)
     
                 val_writer.add_summary(val_output['summary'],
-                                         global_step=val_output['global_step'])
+                                       global_step=val_output['global_step'])
                 val_writer.flush()
 
                 Trainer._keep_printable_keys(train_output)
                 Trainer._keep_printable_keys(val_output)
     
+                tf.logging.info('{}#: Training set loss: {:6.2f} Val acc {:6.2f}%'.format(
+                        train_output['global_step'], train_output['loss'], val_output['accuracy']*100.))
+                tf.logging.info('softmax: sum:{} vector: {}'.format(np.sum(train_output['softmax'][0]), train_output['softmax'][0]))
                 save_path = saver.save(self.sess, self.config.checkpoint_dir + 'run_' + str(train_id))
-                tf.logging.info('train(): Model checkpoint saved to %s' % save_path)
+
+                tf.logging.info('train(): ===== EPOCH {} ====='.format(i))
+                #Do not monitor, just train for one epoch
+                for _ in tqdm(range(self.data_loader.num_batches), ascii=True, desc='epoch'):
+                    self.sess.run([self.model.optimize],
+                                  feed_dict={self.data_loader.handle : train_handle })
+        
         
             train_writer.close()
             val_writer.close()
@@ -291,7 +294,6 @@ class ClassificationTrainer(Trainer):
         try:
             d.pop('summary')
             d.pop('softmax')
-            d.pop('global_step')
         except KeyError as err:
             tf.logging.error(err.args)
 
