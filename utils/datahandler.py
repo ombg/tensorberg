@@ -511,12 +511,8 @@ def dset_from_tfrecord(tfrecord_file,
                        use_distortion=False,
                        repetitions=-1):
 
-    dset = tf.data.TFRecordDataset(tfrecord_file).repeat(repetitions)
+    dset = tf.data.TFRecordDataset(tfrecord_file)
 
-    #TODO
-    dset = dset.map(data_utils.parse_tf_example, num_parallel_calls=batch_size)
-    if use_distortion:
-        dset = dset.map(data_utils.distort_image, num_parallel_calls=batch_size)
 
     #TODO Only during training? Best buffer size?
     if do_shuffle:
@@ -524,12 +520,18 @@ def dset_from_tfrecord(tfrecord_file,
         # Ensure that the capacity is sufficiently large to provide good random
         # shuffling.
         dset = dset.shuffle(buffer_size=min_queue_examples + 3 * batch_size)
-
-    dset = dset.batch(batch_size)
-        
+    
     # TODO Only take up to `max_samples` samples from the data.
     dset = dset.take(max_samples)
 
+    #TODO
+    dset = dset.map(data_utils.parse_tf_example, num_parallel_calls=batch_size)
+    if use_distortion:
+        dset = dset.map(data_utils.distort_image, num_parallel_calls=batch_size)
+
+    dset = dset.repeat(repetitions)
+    dset = dset.batch(batch_size)
+        
     return dset
 
 def get_IMGDB_dataset(img_list_filename,
