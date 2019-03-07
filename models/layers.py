@@ -9,11 +9,12 @@ def fc(x, num_in, units, name, relu=True, force_alloc=False, log_weights=True):
     Returns:
     Output tensor the same shape as `x` except the last dimension is of size `units`.    
     """
-    if num_in * units > 3e8 and force_alloc == False:
+    max_p = 3e8
+    if num_in * units > max_p and force_alloc == False:
         raise MemoryError(('You are trying to allocate more than {} bytes' 
                            ' for a single weight matrix.'
                            ' If this is a good idea'
-                           ' use `force_alloc=True`').format(int(3e8 * 4)))
+                           ' use `force_alloc=True`').format(int(max_p * 4)))
     with tf.variable_scope(name) as scope:
 
         # Create tf variables for the weights and biases
