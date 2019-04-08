@@ -433,6 +433,7 @@ def get_files_from_ord_dict(ord_dict, root_dir, subset):
     return samples_list, labels_list
 
 def dset_from_lists(samples_list,
+                    max_samples=-1,
                     labels_list,
                     process_func,
                     batch_size=64,
@@ -461,10 +462,14 @@ def dset_from_lists(samples_list,
     if do_shuffle:
         dset = dset.shuffle(4000)
 
+    # Only take up to `max_samples` samples from the data.
+    dset = dset.take(max_samples)
+
     dset = dset.repeat(repetitions).batch(batch_size)
     return dset
 
 def dset_from_image_pair(image_pairs,
+                         max_samples=-1, 
                          process_images,
                          process_maps,
                          batch_size=64,
@@ -503,6 +508,9 @@ def dset_from_image_pair(image_pairs,
     if do_shuffle:
         dset = dset.shuffle(4000)
 
+    # Only take up to `max_samples` samples from the data.
+    dset = dset.take(max_samples)
+
     dset = dset.repeat(repetitions).batch(batch_size)
     return dset
 
@@ -523,8 +531,8 @@ def dset_from_tfrecord(tfrecord_file,
         # shuffling.
         dset = dset.shuffle(buffer_size=min_queue_examples + 3 * batch_size)
     
-    # TODO Only take up to `max_samples` samples from the data.
-    #dset = dset.take(max_samples)
+    # Only take up to `max_samples` samples from the data.
+    dset = dset.take(max_samples)
 
     #TODO
     dset = dset.map(data_utils.parse_tf_example, num_parallel_calls=batch_size)
